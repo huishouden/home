@@ -16,22 +16,24 @@ test('a job one member marks done is in the history for the other', async ({ pag
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('listitem', { name: title })).toBeVisible();
 
-  await page.getByRole('button', { name: `Mark done: ${title}` }).click();
-  await expect(page.getByText(`Done: ${title}. Next due`)).toBeVisible();
-
-  // Saved in the household, not just on this screen: the other member's own browser shows it.
-  const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
   try {
-    const theirs = await other.newPage();
-    await signInTestUser(theirs, { email: 'test-b@example.com' });
-    await theirs.getByRole('button', { name: 'History', exact: true }).first().click({ timeout: 20_000 });
-    await expect(theirs.getByRole('listitem', { name: new RegExp(`^${title}, `) })).toBeVisible({ timeout: 20_000 });
-  } finally {
-    await other.close();
-  }
+    await page.getByRole('button', { name: `Mark done: ${title}` }).click();
+    await expect(page.getByText(`Done: ${title}. Next due`)).toBeVisible();
 
-  // Leave the shared household as it was: the job goes (its history entry stays, like a real one).
-  await page.getByRole('button', { name: `Edit ${title}` }).click();
-  await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Delete' }).click();
-  await expect(page.getByRole('listitem', { name: title })).toHaveCount(0);
+    // Saved in the household, not just on this screen: the other member's own browser shows it.
+    const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+    try {
+      const theirs = await other.newPage();
+      await signInTestUser(theirs, { email: 'test-b@example.com' });
+      await theirs.getByRole('button', { name: 'History', exact: true }).first().click({ timeout: 20_000 });
+      await expect(theirs.getByRole('listitem', { name: new RegExp(`^${title}, `) })).toBeVisible({ timeout: 20_000 });
+    } finally {
+      await other.close();
+    }
+  } finally {
+    // Leave the shared household as it was, pass or fail: the job goes (its history entry stays).
+    await page.getByRole('button', { name: `Edit ${title}` }).click();
+    await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('listitem', { name: title })).toHaveCount(0);
+  }
 });
