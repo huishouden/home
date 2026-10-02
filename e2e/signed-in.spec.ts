@@ -79,3 +79,47 @@ test('a helper marks a member’s job done but is told who can change it', async
     await admin.close();
   }
 });
+
+test('a helper ticks off the thing to do before a regular event, and a member sees it done', async ({ page, browser }) => {
+  const title = `Bins ${Date.now().toString(36)}`;
+  const prep = `Put the bins out ${Date.now().toString(36)}`;
+  const member = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  const theirs = await member.newPage();
+  try {
+    // Every week from today, with the thing to do before due today at midnight: late all day, so on Needs doing whenever this runs.
+    await signInTestUser(theirs, { email: 'test-a@example.com' });
+    await theirs.getByRole('button', { name: 'Regular', exact: true }).first().click({ timeout: 20_000 });
+    await theirs.getByRole('button', { name: 'Add event' }).click();
+    const dialog = theirs.getByRole('dialog', { name: 'New regular event' });
+    await dialog.getByLabel('What', { exact: true }).fill(title);
+    await dialog.getByRole('checkbox', { name: 'Something to do before each one' }).check();
+    await dialog.getByLabel('What to do').fill(prep);
+    await dialog.getByRole('button', { name: 'Days before', exact: true }).click();
+    await dialog.getByLabel('Days before').selectOption('0');
+    await dialog.getByLabel('By').fill('00:00');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(theirs.getByRole('listitem', { name: title })).toBeVisible();
+    await theirs.getByRole('button', { name: 'Overview', exact: true }).click();
+    const mine = theirs.getByRole('listitem', { name: prep });
+    await expect(mine.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'false');
+
+    await signInTestUser(page, { email: 'test-helper@example.com' });
+    const row = page.getByRole('listitem', { name: prep });
+    await expect(row).toContainText('was due today by 12 AM', { timeout: 20_000 });
+    await row.getByRole('button', { name: `Done: ${prep}` }).click();
+    await expect(row.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'true');
+
+    // Saved for the household: the member's own browser shows it done, by the helper.
+    await expect(mine.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
+    await expect(mine).toContainText('Done by Test');
+    // Undo is the helper's own to make.
+    await row.getByRole('button', { name: `Done: ${prep}` }).click();
+    await expect(mine.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'false', { timeout: 20_000 });
+  } finally {
+    await theirs.getByRole('button', { name: 'Regular', exact: true }).first().click();
+    await theirs.getByRole('button', { name: `Edit the schedule: ${title}` }).click();
+    await theirs.getByRole('dialog', { name: 'Edit the schedule' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(theirs.getByRole('listitem', { name: title })).toHaveCount(0);
+    await member.close();
+  }
+});

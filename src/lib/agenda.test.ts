@@ -103,7 +103,7 @@ describe('warranties', () => {
 
 describe('everything', () => {
   test('one item per record, each with its ref', () => {
-    const items = agendaItems({ tasks: [filter], log: [visit, { ...visit, id: 'e2', date: at(-1), createdAt: createdOn(-1) }], warranties: [dishwasher], contacts }, now);
+    const items = agendaItems({ tasks: [filter], log: [visit, { ...visit, id: 'e2', date: at(-1), createdAt: createdOn(-1) }], warranties: [dishwasher], contacts, events: [], prep: [] }, now);
     expect(items.map((i) => [i.ref, i.kind])).toEqual([
       ['job:t1', 'due'],
       ['visit:e1', 'appointment'],
@@ -111,22 +111,27 @@ describe('everything', () => {
     ]);
   });
 
-  test('the sample house gives valid items: https links, short titles, status only on jobs', () => {
+  test('the sample house gives valid items: https links, short titles, status only on jobs and things to do before', () => {
     const items = agendaItems(demoData(), DEMO_NOW);
     expect(AGENDA_APP).toBe('home');
     expect(items.some((i) => i.kind === 'due' && i.status === 'overdue')).toBe(true);
     for (const i of items) {
       expect(i.url.startsWith(`${APP_URL}/#`)).toBe(true);
       expect(i.title.length).toBeLessThanOrEqual(120);
-      expect(i.allDay).toBe(true);
-      expect(i.status !== undefined).toBe(i.kind === 'due');
+      const regular = i.ref.startsWith('event:') || i.ref.startsWith('prep:');
+      if (!regular) expect(i.allDay).toBe(true);
+      expect(i.status !== undefined).toBe(i.kind === 'due' || i.ref.startsWith('prep:'));
     }
-    expect(new Set(items.map((i) => i.ref)).size).toBe(items.length);
+    expect(new Set(items.map((i) => `${i.ref}|${i.start}`)).size).toBe(items.length);
+    // Regular events: every occurrence of the next 60 days, and the things to do before them.
+    expect(items.filter((i) => i.ref === 'event:demo-event-trash')).toHaveLength(9);
+    expect(items.filter((i) => i.ref === 'prep:demo-event-lawn').map((i) => i.title)).toContain('Unlock the side gate');
   });
 
   test('a deep link opens its screen; anything else opens the overview', () => {
     expect(tabFromHash('#upkeep')).toBe('upkeep');
     expect(tabFromHash('#warranties')).toBe('warranties');
+    expect(tabFromHash('#regular')).toBe('regular');
     expect(tabFromHash('')).toBe('overview');
     expect(tabFromHash('#nope')).toBe('overview');
   });

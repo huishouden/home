@@ -98,6 +98,45 @@ test('contact search', async ({ page }) => {
   });
 });
 
+test('regular events', ({ page }) =>
+  captureScreenshot(page, 'regular', {
+    fixedTime,
+    prepare: async (p) => {
+      await tab('Regular')(p);
+      await expect(p.getByText('Every other Friday at 9 AM')).toBeVisible();
+    },
+  }));
+
+test('move one occurrence', ({ page }) =>
+  captureScreenshot(page, 'occurrence', {
+    fixedTime,
+    prepare: async (p) => {
+      await tab('Regular')(p);
+      await p.getByRole('button', { name: 'Lawn service, Fri, Oct 31, 9 AM' }).click();
+      await p.getByRole('button', { name: 'Move this one' }).click();
+      await expect(p.getByLabel('New day')).toBeVisible();
+    },
+  }));
+
+test('event dialog', ({ page }) =>
+  captureScreenshot(page, 'event-dialog', {
+    fixedTime,
+    prepare: async (p) => {
+      await tab('Regular')(p);
+      await p.getByRole('button', { name: 'Edit the schedule: Garbage pickup' }).click();
+      await expect(p.getByRole('dialog', { name: 'Edit the schedule' })).toBeVisible();
+    },
+  }));
+
+test('thing to do before, done', ({ page }) =>
+  captureScreenshot(page, 'prep-done', {
+    fixedTime,
+    prepare: async (p) => {
+      await p.getByRole('button', { name: 'Done: Unlock the side gate' }).click();
+      await expect(p.getByText('Done by You')).toBeVisible();
+    },
+  }));
+
 test('phone: overview', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await captureScreenshot(page, 'phone-overview', {

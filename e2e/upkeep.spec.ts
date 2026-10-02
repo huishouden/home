@@ -8,9 +8,9 @@ test('the overview leads with what is overdue, then what is due soon', async ({ 
   await expect(upkeep.getByText('Overdue: gutter cleaning')).toBeVisible();
   await expect(upkeep).toContainText('1 overdue');
   const also = upkeep.getByRole('list', { name: 'Also due' });
-  await expect(also.getByRole('listitem').first()).toContainText('Lawn service');
-  await expect(also.getByRole('listitem').first()).toContainText('Due tomorrow');
-  await expect(also.getByRole('listitem').nth(1)).toContainText('Due in 4 days');
+  await expect(also.getByRole('listitem').first()).toContainText('Change HVAC filter');
+  await expect(also.getByRole('listitem').first()).toContainText('Due in 4 days');
+  await expect(also.getByRole('listitem').nth(1)).toContainText('Due in 12 days');
   await expect(page.getByRole('region', { name: 'Booked visits' })).toContainText('Quarterly pest control');
   await expect(page.getByRole('region', { name: 'Warranties ending' })).toContainText('Expires in 46 days');
 });
@@ -19,7 +19,7 @@ test('Done rolls the job forward, records it in the history, and can be undone',
   await page.goto('/');
   await page.getByRole('button', { name: 'Mark done: Gutter cleaning' }).click();
   await expect(page.getByText('Done: Gutter cleaning. Next due Apr 16, 2032.')).toBeVisible();
-  await expect(page.getByText('Lawn service due tomorrow')).toBeVisible();
+  await expect(page.getByText('Change HVAC filter due in 4 days')).toBeVisible();
 
   await page.getByRole('button', { name: 'History', exact: true }).first().click();
   await expect(page.getByRole('listitem', { name: 'Gutter cleaning, Thursday, October 16' })).toBeVisible();

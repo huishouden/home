@@ -1,6 +1,8 @@
-import { isSchedule, type Schedule } from '@huishouden/pwa-kit/schedule';
+import {
+  cleanRule, happensOn, isEventPrep, isEventRule, toChange, type EventPrep, type EventRule, type OccurrenceChanges, PREP_TITLE_MAX, isSchedule, type Schedule,
+} from '@huishouden/pwa-kit/schedule';
 import { MAX_CENTS } from '@huishouden/pwa-kit/money';
-import { isYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { isHhmm, isYmd, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
 
 // Firestore shapes under households/{householdId}. The project's rules accept exactly these keys,
 // so writers build documents with the functions below and never add fields.
@@ -85,14 +87,67 @@ export interface Warranty extends WarrantyData {
   id: string;
 }
 
+export const EVENT_KINDS = ['trash', 'recycling', 'yard waste', 'lawn', 'hoa', 'cleaning', 'other'] as const;
+export type EventKind = (typeof EVENT_KINDS)[number];
+
+export const EVENT_KIND_LABELS: Record<EventKind, string> = {
+  trash: 'Garbage',
+  recycling: 'Recycling',
+  'yard waste': 'Yard waste',
+  lawn: 'Lawn and garden',
+  hoa: 'HOA',
+  cleaning: 'Cleaning',
+  other: 'Other',
+};
+
+/**
+ * homeEvents/{id}: something that comes and goes on a schedule without anyone completing it
+ * (garbage pickup, a lawn service). One occurrence moved or skipped is a change keyed by the day
+ * the schedule put it on (`exceptions`), so the schedule itself stays put.
+ */
+export interface HomeEventData {
+  title: string;
+  kind: EventKind;
+  rule: EventRule;
+  /** When it happens on its day; all day without one. */
+  time?: Hhmm;
+  contactId?: string;
+  notes?: string;
+  /** Something to do before each occurrence: "Take the garbage out", the evening before. */
+  prep?: EventPrep;
+  exceptions?: OccurrenceChanges;
+  createdAt: number;
+  updatedAt?: number;
+  by: string;
+}
+export interface HomeEvent extends HomeEventData {
+  id: string;
+}
+
+/** homeEventPrep/{eventId}_{day}: the thing to do before one occurrence, ticked off. `day` is the occurrence's original day. */
+export interface PrepTickData {
+  done: true;
+  /** When it was ticked, ms. */
+  at: number;
+  by: string;
+}
+export interface PrepTick extends PrepTickData {
+  id: string;
+}
+
+export const prepTickId = (eventId: string, original: Ymd) => `${eventId}_${original}`;
+
 export const LIMITS = { title: 120, notes: 1000, who: 120, item: 120, details: 200, url: 500 } as const;
 
 export const TASK_KEYS = ['title', 'category', 'schedule', 'due', 'lastDone', 'contactId', 'notes', 'calendarEventId', 'calendarLink', 'createdAt', 'updatedAt', 'by'] as const;
 export const SERVICE_KEYS = ['date', 'title', 'taskId', 'contactId', 'who', 'costCents', 'notes', 'calendarEventId', 'calendarLink', 'createdAt', 'updatedAt', 'by'] as const;
+export const EVENT_KEYS = ['title', 'kind', 'rule', 'time', 'contactId', 'notes', 'prep', 'exceptions', 'createdAt', 'updatedAt', 'by'] as const;
+export const PREP_TICK_KEYS = ['done', 'at', 'by'] as const;
 export const WARRANTY_KEYS = ['item', 'details', 'purchaseDate', 'warrantyEnd', 'receiptUrl', 'manualUrl', 'contactId', 'notes', 'createdAt', 'updatedAt', 'by'] as const;
 
 export type TaskInput = Pick<HomeTaskData, 'title' | 'category' | 'schedule' | 'due' | 'lastDone' | 'contactId' | 'notes' | 'calendarEventId' | 'calendarLink'>;
 export type ServiceInput = Pick<ServiceEntryData, 'date' | 'title' | 'taskId' | 'contactId' | 'who' | 'costCents' | 'notes' | 'calendarEventId' | 'calendarLink'>;
+export type EventInput = Pick<HomeEventData, 'title' | 'kind' | 'rule' | 'time' | 'contactId' | 'notes' | 'prep' | 'exceptions'>;
 export type WarrantyInput = Pick<WarrantyData, 'item' | 'details' | 'purchaseDate' | 'warrantyEnd' | 'receiptUrl' | 'manualUrl' | 'contactId' | 'notes'>;
 
 const text = (s: string | undefined, max: number) => {
@@ -172,6 +227,37 @@ export function warrantyDoc(input: WarrantyInput, s: Stamp): WarrantyData {
     ...stamp(s),
   });
 }
+
+/**
+ * The stored event: a clean rule, a valid time and prep, and only the changes that still fall on
+ * the schedule (editing the schedule drops changes to days it no longer has).
+ */
+export function eventDoc(input: EventInput, s: Stamp): HomeEventData {
+  const rule = cleanRule(input.rule);
+  if (!isEventRule(rule)) throw new Error('Not a schedule');
+  const title = input.title.trim().slice(0, LIMITS.title);
+  if (!title) throw new Error('No title');
+  const prepTitle = input.prep?.title.trim().slice(0, PREP_TITLE_MAX);
+  const prep = input.prep && prepTitle ? { title: prepTitle, offset: { daysBefore: input.prep.offset.daysBefore, time: input.prep.offset.time }, remind: input.prep.remind === true } : undefined;
+  const exceptions = Object.fromEntries(
+    Object.entries(input.exceptions ?? {})
+      .map(([day, c]) => [day, toChange(c)] as const)
+      .filter(([day, c]) => c && isYmd(day) && happensOn(rule, day)),
+  ) as OccurrenceChanges;
+  return defined({
+    title,
+    kind: EVENT_KINDS.includes(input.kind) ? input.kind : 'other',
+    rule,
+    time: isHhmm(input.time) ? input.time : undefined,
+    contactId: input.contactId || undefined,
+    notes: text(input.notes, LIMITS.notes),
+    prep: prep && isEventPrep(prep) ? prep : undefined,
+    exceptions: Object.keys(exceptions).length ? exceptions : undefined,
+    ...stamp(s),
+  });
+}
+
+export const prepTickDoc = (by: string, at: number): PrepTickData => ({ done: true, at: Math.round(at), by });
 
 /** Strips the id for writing a document back (Undo). */
 export const withoutId = <T extends { id: string }>({ id: _id, ...rest }: T) => rest;

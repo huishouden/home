@@ -51,3 +51,30 @@ export const calendarEvents: CalendarMatch[] = [
 export function mockCalendar(events: CalendarMatch[]) {
   (window as unknown as { __mockCalendarEvents: CalendarMatch[] }).__mockCalendarEvents = events;
 }
+
+/** A garbage pickup that repeats every Thursday at 7 AM, and a one-off lawn visit: the first is offered as a regular event. */
+export const repeatingEvents: CalendarMatch[] = [
+  ...[23, 30].map((day) => ({
+    id: `evt-trash-${day}`,
+    title: 'Trash day',
+    start: at(10, day, 7, 0),
+    allDay: false,
+    location: '',
+    description: '',
+    link: `https://calendar.example.com/event?eid=evt-trash-${day}`,
+    calendarName: 'Family',
+    recurringEventId: 'evt-trash',
+  })),
+  ...[6, 13].map((day) => ({
+    id: `evt-trash-n${day}`,
+    title: 'Trash day',
+    start: at(11, day, 7, 0),
+    allDay: false,
+    location: '',
+    description: '',
+    link: `https://calendar.example.com/event?eid=evt-trash-n${day}`,
+    calendarName: 'Family',
+    recurringEventId: 'evt-trash',
+  })),
+  calendarEvents[1],
+];

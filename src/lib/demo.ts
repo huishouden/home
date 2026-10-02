@@ -1,5 +1,5 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import type { Category, HomeTask, ServiceEntry, Warranty } from './model';
+import { prepTickId, type Category, type HomeEvent, type HomeTask, type PrepTick, type ServiceEntry, type Warranty } from './model';
 import { firstDue, type Schedule } from '@huishouden/pwa-kit/schedule';
 import { addDays, addMonths, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 
@@ -20,6 +20,10 @@ export interface HomeData {
   warranties: Warranty[];
   /** The household's contacts shown in Home. */
   contacts: Contact[];
+  /** Regular events: garbage pickup, a lawn service. */
+  events: HomeEvent[];
+  /** Things to do before an occurrence, ticked off. */
+  prep: PrepTick[];
 }
 
 const day = (offset: number) => addDays(DEMO_TODAY, offset);
@@ -62,14 +66,12 @@ function tasks(): HomeTask[] {
   const fixed = (every: number, unit: Schedule['unit'], anchor: Ymd): Schedule => ({ kind: 'fixed', every, unit, anchor });
   const after = (every: number, unit: Schedule['unit']): Schedule => ({ kind: 'after-done', every, unit });
   const pest = fixed(3, 'month', '2031-01-28');
-  const lawn = fixed(2, 'week', '2031-03-07');
   const smoke = fixed(1, 'year', '2030-11-02');
   const hoa = fixed(1, 'month', '2031-01-01');
   const insurance = fixed(1, 'year', '2029-02-01');
   const specs: TaskSpec[] = [
     ['demo-task-filter', 'Change HVAC filter', 'hvac', after(3, 'month'), day(4), addMonths(day(4), -3), undefined, '16x25x1 filters, two in the hall closet.'],
     ['demo-task-gutters', 'Gutter cleaning', 'gutters', after(6, 'month'), day(-5), addMonths(day(-5), -6), ROOFING],
-    ['demo-task-lawn', 'Lawn service', 'lawn', lawn, firstDue(lawn, DEMO_TODAY), addDays(firstDue(lawn, DEMO_TODAY), -14), LAWN],
     ['demo-task-pest', 'Pest control visit', 'pest', pest, firstDue(pest, DEMO_TODAY), '2031-07-28', PEST],
     ['demo-task-hoa', 'HOA dues', 'paperwork', hoa, firstDue(hoa, DEMO_TODAY), '2031-10-01', HOA, 'Pay on the HOA portal. Late after the 15th.'],
     ['demo-task-smoke', 'Smoke detector batteries', 'safety', smoke, firstDue(smoke, DEMO_TODAY), '2030-11-02', undefined, 'Nine detectors, 9V batteries.'],
@@ -95,14 +97,15 @@ type EntrySpec = [date: Ymd, title: string, taskId: string | undefined, who: str
 
 function log(t: HomeTask[]): ServiceEntry[] {
   const task = (id: string) => t.find((x) => x.id === id)!;
-  const lawnDone = task('demo-task-lawn').lastDone!;
+  // The lawn service comes every other Friday (a regular event, below); the last two visits.
+  const lawnDone = '2031-10-03';
   const specs: EntrySpec[] = [
     // Booked visits (after the demo day).
     [day(12), 'Quarterly pest control', 'demo-task-pest', PEST, undefined, 'Inside and outside. Someone needs to be home.', 'https://calendar.example.com/event?eid=demo-pest'],
     [day(20), 'HVAC tune-up', undefined, HVAC, undefined, 'Before winter. Ask about the humidifier pad.', 'https://calendar.example.com/event?eid=demo-hvac'],
     // History.
-    [lawnDone, 'Lawn service', 'demo-task-lawn', LAWN, 6500],
-    [addDays(lawnDone, -14), 'Lawn service', 'demo-task-lawn', LAWN, 6500],
+    [lawnDone, 'Lawn service', undefined, LAWN, 6500],
+    [addDays(lawnDone, -14), 'Lawn service', undefined, LAWN, 6500],
     ['2031-10-01', 'HOA dues', 'demo-task-hoa', HOA, 8500],
     ['2031-09-01', 'HOA dues', 'demo-task-hoa', HOA, 8500],
     [task('demo-task-filter').lastDone!, 'Change HVAC filter', 'demo-task-filter', 'We did it', 3200, 'Two filters from the hardware store.'],
@@ -146,7 +149,48 @@ function warranties(): Warranty[] {
   return list.map((w, i) => ({ id: `demo-warranty-${i + 1}`, ...w, createdAt: created, by: SAM }));
 }
 
+/**
+ * Garbage every Thursday (out the evening before; this week's went out), recycling every other
+ * Thursday, the lawn service every other Friday (the side gate unlocked the evening before, so
+ * tonight; Thanksgiving week's visit moved to the Saturday), and the HOA meeting on the second Tuesday.
+ */
+function events(): HomeEvent[] {
+  const evening = { daysBefore: 1, time: '19:00' };
+  return [
+    {
+      id: 'demo-event-trash',
+      title: 'Garbage pickup',
+      kind: 'trash',
+      rule: { freq: 'week', every: 1, start: '2031-01-02' },
+      time: '07:00',
+      notes: 'Bins by the curb, lids closed.',
+      prep: { title: 'Take the garbage out', offset: evening, remind: true },
+      createdAt: created,
+      by: SAM,
+    },
+    { id: 'demo-event-recycling', title: 'Recycling pickup', kind: 'recycling', rule: { freq: 'week', every: 2, start: '2031-01-09' }, time: '07:00', createdAt: created, by: SAM },
+    {
+      id: 'demo-event-lawn',
+      title: 'Lawn service',
+      kind: 'lawn',
+      rule: { freq: 'week', every: 2, start: '2031-03-07' },
+      time: '09:00',
+      contactId: LAWN,
+      prep: { title: 'Unlock the side gate', offset: evening, remind: true },
+      exceptions: { '2031-11-28': { moved: { date: '2031-11-29', time: '10:00' }, note: 'Thanksgiving week' } },
+      createdAt: created,
+      by: ALEX,
+    },
+    { id: 'demo-event-hoa', title: 'HOA meeting', kind: 'hoa', rule: { freq: 'month', every: 1, start: '2031-01-14', nth: 2, weekday: 2 }, time: '19:00', contactId: HOA, createdAt: created, by: SAM },
+  ];
+}
+
+/** This morning's garbage went out last night. */
+function prep(): PrepTick[] {
+  return [{ id: prepTickId('demo-event-trash', DEMO_TODAY), done: true, at: new Date(2031, 9, 15, 19, 40).getTime(), by: ALEX }];
+}
+
 export function demoData(): HomeData {
   const t = tasks();
-  return { tasks: t, log: log(t), warranties: warranties(), contacts: contacts() };
+  return { tasks: t, log: log(t), warranties: warranties(), contacts: contacts(), events: events(), prep: prep() };
 }

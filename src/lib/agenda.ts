@@ -4,12 +4,14 @@ import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
 import { daysBetween, toYmd } from '@huishouden/pwa-kit/time';
 import type { HomeTask, ServiceEntry, Warranty } from './model';
+import { eventAgenda, eventRef, prepAgenda, prepRef } from './events';
 import type { HomeData } from './demo';
 import type { TabId } from './tabs';
 import { dueState } from './upkeep';
 
 // What Home puts on the household agenda (households/{id}/agenda, read by the portal): each job's
-// next due date, visits booked ahead, and warranties ending. Pure: every function takes `now`.
+// next due date, visits booked ahead, warranties ending, and regular events (each occurrence of the
+// next 60 days, and the thing to do before it as a task). Pure: every function takes `now`.
 
 /** Home's public address (the same as the PWA manifest's). */
 export const APP_URL = 'https://huishouden-home.web.app';
@@ -22,7 +24,7 @@ export const jobRef = (id: string) => `job:${id}`;
 export const visitRef = (id: string) => `visit:${id}`;
 export const warrantyRef = (id: string) => `warranty:${id}`;
 
-const screen = (appUrl: string, tab: TabId) => `${appUrl}/#${tab}`;
+export const screen = (appUrl: string, tab: TabId) => `${appUrl}/#${tab}`;
 const contactName = (contacts: Contact[], id?: string) => (id ? contacts.find((c) => c.id === id)?.name : undefined);
 const joined = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ') || undefined;
 const inWindow = (items: AgendaEntry[], now: number) => items.filter((i) => inAgendaWindow(i, now));
@@ -91,11 +93,13 @@ export function warrantyAgenda(w: Warranty, now: number, appUrl = APP_URL): Agen
 }
 
 /** Everything Home publishes, for `syncAgenda` when the app opens. */
-export function agendaItems(data: Pick<HomeData, 'tasks' | 'log' | 'warranties' | 'contacts'>, now: number, appUrl = APP_URL): AgendaInput[] {
+export function agendaItems(data: Pick<HomeData, 'tasks' | 'log' | 'warranties' | 'contacts' | 'events' | 'prep'>, now: number, appUrl = APP_URL): AgendaInput[] {
   const withRef = (ref: string, items: AgendaEntry[]) => items.map((i) => ({ ...i, ref }));
   return [
     ...data.tasks.flatMap((t) => withRef(jobRef(t.id), jobAgenda(t, data.contacts, now, appUrl))),
     ...data.log.flatMap((e) => withRef(visitRef(e.id), visitAgenda(e, data.contacts, now, appUrl))),
     ...data.warranties.flatMap((w) => withRef(warrantyRef(w.id), warrantyAgenda(w, now, appUrl))),
+    ...data.events.flatMap((e) => withRef(eventRef(e.id), eventAgenda(e, data.contacts, now, screen(appUrl, 'regular')))),
+    ...data.events.flatMap((e) => withRef(prepRef(e.id), prepAgenda(e, data.prep, now, screen(appUrl, 'regular')))),
   ];
 }

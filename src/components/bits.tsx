@@ -1,6 +1,11 @@
 import {
   AlarmSmoke,
   Bug,
+  CalendarClock,
+  Recycle,
+  Sparkles,
+  Sprout,
+  Users,
   CloudRain,
   Droplets,
   Fan,
@@ -17,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { telHref } from '@huishouden/pwa-kit/places';
-import { CATEGORY_LABELS, type Category } from '../lib/model';
+import { CATEGORY_LABELS, EVENT_KIND_LABELS, type Category, type EventKind } from '../lib/model';
 import { deleteButton, inputClass, linkClass } from '@huishouden/pwa-kit/react/ui';
 import { MONTHS, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
 
@@ -44,6 +49,31 @@ export function CategoryTile({ category, attention, size = 'md' }: { category: C
       className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-terracotta-light text-terracotta-dark' : 'bg-forest-50 text-forest-700'}`}
       role="img"
       aria-label={CATEGORY_LABELS[category]}
+    >
+      <Icon size={size === 'lg' ? 28 : 22} strokeWidth={2} aria-hidden="true" />
+    </span>
+  );
+}
+
+const EVENT_ICONS: Record<EventKind, LucideIcon> = {
+  trash: Trash2,
+  recycling: Recycle,
+  'yard waste': Sprout,
+  lawn: Leaf,
+  hoa: Users,
+  cleaning: Sparkles,
+  other: CalendarClock,
+};
+
+/** A regular event's kind as an icon on a soft tile; terracotta when it needs attention. */
+export function EventTile({ kind, attention, size = 'md' }: { kind: EventKind; attention?: boolean; size?: 'md' | 'lg' }) {
+  const Icon = EVENT_ICONS[kind] ?? CalendarClock;
+  const box = size === 'lg' ? 'h-14 w-14' : 'h-11 w-11';
+  return (
+    <span
+      className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-terracotta-light text-terracotta-dark' : 'bg-forest-50 text-forest-700'}`}
+      role="img"
+      aria-label={EVENT_KIND_LABELS[kind]}
     >
       <Icon size={size === 'lg' ? 28 : 22} strokeWidth={2} aria-hidden="true" />
     </span>
