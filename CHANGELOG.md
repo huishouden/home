@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/huishouden/home/compare/v1.1.0...v1.2.0) (2026-10-02)
+
+
+### Features
+
+* offer new calendar events on the main screen ([#12](https://github.com/huishouden/home/issues/12)) ([f74effd](https://github.com/huishouden/home/commit/f74effdec793d9f862262be382f023f8e00b95b2))
+
 ## [1.1.0](https://github.com/huishouden/home/compare/v1.0.1...v1.1.0) (2026-10-02)
 
 
