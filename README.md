@@ -78,6 +78,20 @@ Find in my calendar and Import from calendar read Google Calendar (read-only) th
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
 places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed.
 
+## Privacy
+
+Household data lives in the household's own Firestore documents, visible only to its members.
+To catch problems early, the app sends reports to New Relic (free tier) through
+`@huishouden/pwa-kit/observability`: errors (emails, ids, query strings and long numbers removed),
+Core Web Vitals and page loads, the app version, device type, and the country and region New Relic
+derives from the request; and anonymous usage counts per visit: `mark job done`, `save job`, `log service`, `save warranty`, and which tab is open. Households are counted by a
+hash of the id. No names, emails, entries, free text or precise location, and no cookie or stored
+id: nothing links one visit to the next. When the browser sends Global Privacy Control or Do Not
+Track, usage counts are skipped; errors and speed still go. Builds without the `VITE_NEWRELIC_*`
+repo variables (local, staging) send nothing. The page people see is
+[huishouden-piekstra.web.app/privacy](https://huishouden-piekstra.web.app/privacy); details in pwa-kit
+[docs/observability.md](https://github.com/huishouden/pwa-kit/blob/main/docs/observability.md).
+
 ## Develop
 
 ```sh

@@ -11,6 +11,7 @@ import { toYmd } from '@huishouden/pwa-kit/time';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { db } from './firebase';
 import type { HomeActions, HomeStore } from './types';
+import { track } from '@huishouden/pwa-kit/observability';
 
 const TASKS = 'homeTasks';
 const LOG = 'homeServiceLog';
@@ -95,6 +96,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     };
     return {
       saveTask: (id, input) => {
+        track('save job');
         const taskRef = ref(TASKS, id);
         const data = taskDoc(input, stampFor(current.current.tasks.find((t) => t.id === id)));
         report(setDoc(taskRef, data));
@@ -109,6 +111,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
         publishJob(t);
       },
       markDone: (task, doneOn) => {
+        track('mark job done');
         const { due, lastDone, entry } = markDone(task, doneOn);
         const entryRef = ref(LOG);
         const batch = writeBatch(db);
@@ -127,6 +130,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
         publishJob(task);
       },
       saveEntry: (id, input) => {
+        track('log service');
         const existing = id ? current.current.log.find((e) => e.id === id) : undefined;
         const data = serviceDoc(input, stampFor(existing));
         const entryRef = ref(LOG, id);
@@ -149,6 +153,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
         publishVisit(e);
       },
       saveWarranty: (id, input) => {
+        track('save warranty');
         const docRef = ref(WARRANTIES, id);
         const data = warrantyDoc(input, stampFor(current.current.warranties.find((w) => w.id === id)));
         report(setDoc(docRef, data));
