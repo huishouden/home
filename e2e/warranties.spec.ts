@@ -42,3 +42,11 @@ test('deleting an item can be undone', async ({ page }) => {
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByRole('region', { name: 'Dishwasher' })).toBeVisible();
 });
+
+test('an agenda link opens its screen', async ({ page }) => {
+  await page.goto('/#warranties');
+  await expect(page.locator('main section[aria-label]').first()).toHaveAttribute('aria-label', 'Refrigerator');
+  await page.goto('/#upkeep');
+  await expect(page.getByRole('heading', { name: 'Upkeep', level: 2 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark done: Gutter cleaning' })).toBeVisible();
+});

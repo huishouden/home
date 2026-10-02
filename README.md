@@ -60,6 +60,20 @@ shared by every app (`@huishouden/pwa-kit/contacts`); Home shows those whose `ap
 Google with no extra scopes; the household comes from the shared `households` document, so one invite from the
 portal opens every Huishouden app.
 
+Home also publishes to the household agenda (`households/{householdId}/agenda`, through
+`@huishouden/pwa-kit/agenda`), which the portal shows as one calendar and a Today view. Every member
+can read it, so it carries only titles, schedules and contact names:
+
+| Kind | From | Status |
+|---|---|---|
+| `due` | each job's next due date, with its schedule and contact | `upcoming`, `overdue` once the day has passed |
+| `appointment` | history entries booked ahead (dated after the day they were added), with the contact | none |
+| `renewal` | a warranty's end date ("Dishwasher warranty ends"), with its details | none |
+
+Items are all-day, cover 30 days back to 180 days ahead (overdue jobs whatever their age), and link to
+`#upkeep`, `#history` or `#warranties`. Each save updates its record's items; opening the app
+reconciles everything. The signed-out sample house writes nothing. The mapping is `src/lib/agenda.ts`.
+
 Find in my calendar and Import from calendar read Google Calendar (read-only) through
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
 places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed.
