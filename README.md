@@ -54,7 +54,7 @@ Signed-in members of a Huishouden household read and write under `households/{ho
 | `homeWarranties` | `item`, `details`, `purchaseDate`, `warrantyEnd`, `receiptUrl`, `manualUrl`, `contactId`, `notes`, `createdAt`, `updatedAt`, `by` |
 
 Dates are `YYYY-MM-DD`; costs are whole cents. The documents are built in `src/lib/model.ts` with exactly
-these keys, which the Firestore rules (in [huishouden/tasks](https://github.com/huishouden/tasks), the repo that
+these keys, which the Firestore rules (in [huishouden/rules](https://github.com/huishouden/rules), the repo that
 owns the project's rules file) accept and nothing more. Providers live in the household-wide `contacts` collection
 shared by every app (`@huishouden/pwa-kit/contacts`); Home shows those whose `apps` include `home`. Signing in uses
 Google with no extra scopes; the household comes from the shared `households` document, so one invite from the
