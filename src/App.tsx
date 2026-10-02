@@ -11,6 +11,7 @@ import { HomeApp } from './HomeApp';
 import { Header } from './components/Header';
 import { cardClass, primaryButton } from './components/ui';
 import { useToast } from './useToast';
+import { PORTAL_URL } from './lib/portal';
 
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -80,7 +81,7 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
         {user.email} isn't a member of a Huishouden household. Ask someone in your household to invite this address from the Huishouden home screen, then open
         Home again. If you use another Google account for the household, sign out and sign in with that one.
       </p>
-      <a className={`${primaryButton} mt-5`} href="https://huishouden-piekstra.web.app">
+      <a className={`${primaryButton} mt-5`} href={PORTAL_URL}>
         Open Huishouden
       </a>
     </Plain>
