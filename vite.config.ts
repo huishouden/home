@@ -20,7 +20,8 @@ export default defineConfig({
     pwaApp({
       name: 'Huishouden Home',
       shortName: 'Home',
-      description: 'Upkeep schedule, service history, warranties and the service providers for the house.',
+      description: "Keeping the house in good shape",
+      url: 'https://huishouden-home.web.app',
       themeColor: '#1b4332',
       backgroundColor: '#faf9f5',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
