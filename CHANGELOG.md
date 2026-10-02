@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/huishouden/home/compare/v1.0.1...v1.1.0) (2026-10-02)
+
+
+### Features
+
+* publish upkeep, visits and warranty ends to the household agenda ([#8](https://github.com/huishouden/home/issues/8)) ([87c2403](https://github.com/huishouden/home/commit/87c240360910df7c3e5794eb868d85fbd9a6eaff))
+
 ## [1.0.1](https://github.com/huishouden/home/compare/v1.0.0...v1.0.1) (2026-10-02)
 
 
