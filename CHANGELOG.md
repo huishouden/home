@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/huishouden/home/compare/v1.0.0...v1.0.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* Google API tokens from Google Identity Services, not Firebase sign-in (kit v0.23.0) ([#5](https://github.com/huishouden/home/issues/5)) ([b288891](https://github.com/huishouden/home/commit/b2888913759c97873f1ed97147561dbe52447936))
+
 ## 1.0.0 (2026-10-02)
 
 
