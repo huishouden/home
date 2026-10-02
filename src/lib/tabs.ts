@@ -1,5 +1,5 @@
 /** The app's screens, addressable as `#upkeep`, `#history` and so on (agenda deep links use them). */
-export const TAB_IDS = ['overview', 'upkeep', 'history', 'warranties', 'contacts'] as const;
+export const TAB_IDS = ['overview', 'upkeep', 'regular', 'history', 'warranties', 'contacts'] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
 /** The screen a URL hash names; the overview for an empty or unknown one. */

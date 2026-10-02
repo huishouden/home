@@ -19,6 +19,14 @@ Installable on the tablet, phones and laptops, and works offline (changes sync w
 |---|---|
 | ![Marking a job done moves it on and offers Undo](docs/screenshots/done.png) | ![Editing a job that repeats every month on the 1st](docs/screenshots/job-dialog.png) |
 
+| Regular events | Moving one occurrence |
+|---|---|
+| ![Garbage every Thursday, recycling every other Thursday, the lawn service every other Friday with one visit moved, each with its next dates](docs/screenshots/regular.png) | ![Moving one lawn visit to another day without changing the schedule](docs/screenshots/occurrence.png) |
+
+| Something to do before, done | An event's schedule |
+|---|---|
+| ![Unlock the side gate, ticked off on the overview with who did it and when](docs/screenshots/prep-done.png) | ![Garbage pickup every Thursday at 7 AM, taken out the evening before at 7 PM with a reminder](docs/screenshots/event-dialog.png) |
+
 | Contacts | Import from calendar |
 |---|---|
 | ![Service providers with tap-to-call numbers and map links](docs/screenshots/contacts.png) | ![House visits found in the calendar, each with Add](docs/screenshots/calendar-import.png) |
@@ -43,6 +51,26 @@ Months clamp to the month's last day (January 31 plus a month is February 28) an
 later months. Everything is in local calendar days. Adding a past history entry for a job also marks
 the job done on that day when it is the latest time it was done; a future entry is a booked visit.
 
+## Regular events
+
+Some things come and go on a schedule without anyone completing them: garbage and recycling pickup,
+a lawn service every other Friday, the HOA meeting on the second Tuesday. Each repeats weekly on
+chosen weekdays, every few weeks, monthly (on a day, or the nth or last weekday) or yearly
+(`EventRule` in `@huishouden/pwa-kit/schedule`).
+
+- **One occurrence changes, the schedule doesn't.** Tap a date to move that one (a holiday week) or
+  skip it; the change is kept against the day the schedule put it on, so "Back to Fri, Oct 31" undoes it.
+- **Something to do before.** "Take the garbage out, the evening before at 7 PM" shows in Needs
+  doing on the overview from 14 hours ahead, with a big Done toggle, who did it and when, and Undo.
+  Not done by its time it turns terracotta; once the event begins it shows as missed for the rest of
+  that day. With a reminder on, every device gets a push notification at that time.
+- **On the household calendar.** Each occurrence of the next 60 days goes on the portal's Calendar
+  and Today (lawn, cleaning and HOA as appointments, pickups as other), and each thing to do before
+  as a task: upcoming, overdue once its time passes, done once ticked.
+- **From the calendar.** A garbage, trash, recycling, lawn or landscaping event that repeats in
+  Google Calendar is offered as one regular event (new-in-your-calendar card, and Import from calendar),
+  with its schedule and time filled in.
+
 ## Data
 
 Signed-in members of a Huishouden household read and write under `households/{householdId}`:
@@ -52,6 +80,8 @@ Signed-in members of a Huishouden household read and write under `households/{ho
 | `homeTasks` | `title`, `category`, `schedule` (`kind`, `every`, `unit`, `anchor` for set dates), `due`, `lastDone`, `contactId`, `notes`, `calendarEventId`, `calendarLink`, `createdAt`, `updatedAt`, `by` |
 | `homeServiceLog` | `date`, `title`, `taskId`, `contactId`, `who`, `costCents`, `notes`, `calendarEventId`, `calendarLink`, `createdAt`, `updatedAt`, `by` |
 | `homeWarranties` | `item`, `details`, `purchaseDate`, `warrantyEnd`, `receiptUrl`, `manualUrl`, `contactId`, `notes`, `createdAt`, `updatedAt`, `by` |
+| `homeEvents` | `title`, `kind` (`trash`, `recycling`, `yard waste`, `lawn`, `hoa`, `cleaning`, `other`), `rule`, `time` (`HH:MM`), `contactId`, `notes`, `prep` (`title`, `offset` `{ daysBefore, time }`, `remind`), `exceptions` (by original day: `moved` `{ date, time }`, `skipped`, `note`), `createdAt`, `updatedAt`, `by` |
+| `homeEventPrep` | id `<eventId>_<original day>`: `done` (true), `at`, `by` |
 
 Dates are `YYYY-MM-DD`; costs are whole cents. The documents are built in `src/lib/model.ts` with exactly
 these keys, which the Firestore rules (in [huishouden/rules](https://github.com/huishouden/rules), the repo that

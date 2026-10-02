@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { CalendarArrowDown, ExternalLink, Pencil, Plus } from 'lucide-react';
+import { CalendarArrowDown, ExternalLink, Pencil, Plus, Repeat } from 'lucide-react';
 import type { ServiceEntry } from '../lib/model';
-import { HOME_CALENDAR_QUERIES } from '../lib/calendarImport';
-import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { CALENDAR_WORDS } from '../lib/calendarImport';
+import { splitRegular } from '../lib/events';
+import { describeRule } from '@huishouden/pwa-kit/schedule';
+import { clockWords } from '@huishouden/pwa-kit/time';
+import type { CalendarMatch, CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { formatCents } from '@huishouden/pwa-kit/money';
 import { daysBetween, longDate, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
 import { mayChange, type HomeStore } from '../data/types';
@@ -13,7 +16,7 @@ import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishoud
 import { cardClass, iconButton, linkClass, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** The service history: booked visits ahead, then everything done, newest first, with what it cost. */
-export function History({ store, today, calendarAvailable, onAdd, onEdit, onImport }: {
+export function History({ store, today, calendarAvailable, onAdd, onEdit, onImport, onMakeRegular }: {
   store: HomeStore;
   today: Ymd;
   calendarAvailable: boolean;
@@ -21,6 +24,8 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
   onEdit: (e: ServiceEntry) => void;
   /** Adds calendar events to the history as visits, with a toast. */
   onImport: (list: CalendarMatch[]) => void;
+  /** Opens a new regular event from a repeating calendar series (garbage pickup every Thursday). */
+  onMakeRegular: (series: CalendarSeries) => void;
 }) {
   const [importing, setImporting] = useState(false);
   const scan = useCalendarSearch(auth, 'Home');
@@ -28,7 +33,10 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
   const booked = log.filter((e) => daysBetween(today, e.date) > 0).sort((a, b) => daysBetween(b.date, a.date));
   const done = log.filter((e) => daysBetween(today, e.date) <= 0).sort((a, b) => daysBetween(a.date, b.date) || b.createdAt - a.createdAt);
   const years = [...new Set(done.map((e) => ymdParts(e.date)!.y))].sort((a, b) => b - a);
-  const runScan = () => void scan.run(HOME_CALENDAR_QUERIES, { limit: 25 });
+  const runScan = () => void scan.run(CALENDAR_WORDS, { limit: 50 });
+  // Repeating pickups and lawn services are offered as one regular event each, not as visits.
+  const split = scan.state.status === 'done' ? splitRegular(scan.state.matches, store.data.events) : null;
+  const visitsState = split ? { status: 'done' as const, matches: split.visits } : scan.state;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 lg:h-full lg:overflow-y-auto">
@@ -96,8 +104,8 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
 
       {importing && (
         <CalendarImportDialog
-          state={scan.state}
-          intro="Pest control, lawn, HVAC, plumber, electrician, inspection, gutter, roof and pool visits from last week to a year ahead."
+          state={visitsState}
+          intro="Pest control, lawn, HVAC, plumber, electrician, inspection, gutter, roof and pool visits from last week to a year ahead, and garbage, recycling and lawn days that repeat."
           noneFound="No house visits found in your calendars."
           allImported="Every house visit in your calendar is already in Home."
           records={log}
@@ -107,7 +115,35 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
             setImporting(false);
             scan.reset();
           }}
-        />
+        >
+          {split && split.offers.length > 0 && (
+            <ul className="mt-4 divide-y divide-stone-200 rounded-2xl border border-forest-200 bg-forest-50" aria-label="Regular events">
+              {split.offers.map((o) => (
+                <li key={o.key} className="flex items-center gap-3 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-stone-800 [overflow-wrap:anywhere]">{o.title}</p>
+                    <p className="text-sm text-stone-600">
+                      Looks regular: {describeRule(o.rule)}
+                      {o.time ? ` at ${clockWords(o.time)}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    onClick={() => {
+                      setImporting(false);
+                      scan.reset();
+                      onMakeRegular(o);
+                    }}
+                    aria-label={`Make ${o.title} a regular event`}
+                  >
+                    <Repeat size={18} /> Make it regular
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CalendarImportDialog>
       )}
     </div>
   );

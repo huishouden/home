@@ -1,13 +1,16 @@
 import { Check, ChevronRight, Plus } from 'lucide-react';
+import { personName } from '@huishouden/pwa-kit/people';
+import { prepWhen, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import type { HomeTask, ServiceEntry, Warranty } from '../lib/model';
+import type { HomeEvent, HomeTask, ServiceEntry, Warranty } from '../lib/model';
+import { eventWhen, nextUp, occurrenceWords, type PrepTask } from '../lib/events';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
 import { dueState, dueText, headline, needsAttention, byDue } from '../lib/upkeep';
 import { EXPIRING_DAYS, byExpiry, warrantyState, warrantyText } from '../lib/warranty';
 import { formatCents } from '@huishouden/pwa-kit/money';
-import { daysBetween, longDate, shortDate, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
+import { clockWords, daysBetween, longDate, midSentence, shortDate, toHhmm, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
-import { CategoryTile, DateTile, WhoLine } from '../components/bits';
+import { CategoryTile, DateTile, EventTile, WhoLine } from '../components/bits';
 import { cardClass, ghostButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export type { TabId } from '../lib/tabs';
@@ -22,13 +25,21 @@ interface Props {
   onEditEntry: (entry: ServiceEntry) => void;
   onEditWarranty: (w: Warranty) => void;
   onOpen: (tab: TabId) => void;
+  /** Things to do before regular events that need doing now (`prepTasks`). */
+  prep: PrepTask[];
+  now: number;
+  onTogglePrep: (task: PrepTask) => void;
+  onOpenOccurrence: (event: HomeEvent, occurrence: Occurrence) => void;
 }
 
 const contactOf = (contacts: Contact[], id?: string) => (id ? contacts.find((c) => c.id === id) : undefined);
 
 /** What the house needs now, readable from across the room: the next job first, then booked visits and warranties. */
-export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen }: Props) {
-  const { tasks, log, warranties, contacts } = store.data;
+export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onOpenOccurrence }: Props) {
+  const { tasks, log, warranties, contacts, events } = store.data;
+  const regular = nextUp(events, today, now).slice(0, 2);
+  const prepLate = prep.filter((t) => t.state === 'due' || t.state === 'missed').length;
+  const prepOpen = prep.filter((t) => t.state !== 'done').length;
   const attention = needsAttention(tasks, today);
   const [first, ...rest] = attention.length ? attention : byDue(tasks).slice(0, 1);
   const later = attention.length ? rest : [];
@@ -49,11 +60,19 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         <div className="flex items-center justify-between gap-4">
           <p className={overline}>
             {attention.length === 0 ? 'Upkeep' : overdue ? `${overdue} overdue · ${attention.length - overdue} due soon` : `${attention.length} due in the next two weeks`}
+            {prepOpen > 0 ? ` · ${prepOpen} to do ${prepLate ? 'now' : 'soon'}` : ''}
           </p>
           <button type="button" className={ghostButton} onClick={() => onOpen('upkeep')}>
             All jobs <ChevronRight size={18} />
           </button>
         </div>
+        {prep.length > 0 && (
+          <ul className="mt-2 mb-3 border-b border-stone-200" aria-label="Before regular events">
+            {prep.map((t) => (
+              <PrepRow key={t.id} task={t} now={now} today={today} me={store.me} onToggle={() => onTogglePrep(t)} />
+            ))}
+          </ul>
+        )}
         {!first ? (
           <div className="mt-2">
             <p className="text-3xl font-semibold text-stone-800">Nothing scheduled yet</p>
@@ -77,8 +96,37 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         )}
       </section>
 
-      <div className="flex min-h-0 flex-col gap-6">
-        <section className={`${cardClass} flex min-h-0 flex-col px-6 py-5`} aria-label="Booked visits">
+      <div className={`flex min-h-0 flex-col ${regular.length ? 'gap-4' : 'gap-6'}`}>
+        {regular.length > 0 && (
+          <section className={`${cardClass} shrink-0 px-6 py-4`} aria-label="Regular events">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-stone-800">Coming up</h2>
+              <button type="button" className={ghostButton} onClick={() => onOpen('regular')}>
+                Regular <ChevronRight size={18} />
+              </button>
+            </div>
+            <ul className="mt-1">
+              {regular.map(({ event, occurrence }) => (
+                <li key={event.id}>
+                  <button
+                    type="button"
+                    className="flex min-h-11 w-full items-center gap-3 text-left hover:bg-stone-50"
+                    onClick={() => onOpenOccurrence(event, occurrence)}
+                    aria-label={`${event.title} · ${occurrenceWords(occurrence, today)}`}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-lg font-medium text-stone-800">{event.title}</span>
+                    <span className="shrink-0 text-base font-medium text-forest-700">
+                      {occurrenceWords(occurrence, today)}
+                      {occurrence.moved ? ' · moved' : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className={`${cardClass} flex ${regular.length ? 'shrink-0 py-4' : 'min-h-0 py-5'} flex-col px-6`} aria-label="Booked visits">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-semibold text-stone-800">Booked visits</h2>
             <button type="button" className={ghostButton} onClick={() => onOpen('history')}>
@@ -89,7 +137,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
             <p className="mt-2 text-base text-stone-600">No visits booked.</p>
           ) : (
             <ul className="mt-2 min-h-0 overflow-y-auto">
-              {booked.slice(0, 3).map((e, i) => {
+              {booked.slice(0, regular.length ? 1 : 3).map((e, i) => {
                 const who = contactOf(contacts, e.contactId);
                 return (
                   <li key={e.id} className="border-b border-stone-200 last:border-b-0">
@@ -194,6 +242,47 @@ function Row({ task, today, onDone, onEdit }: { task: HomeTask; today: Ymd; onDo
       </button>
       <button type="button" className={secondaryButton} onClick={onDone} aria-label={`Mark done: ${task.title}`}>
         <Check size={18} /> Done
+      </button>
+    </li>
+  );
+}
+
+/**
+ * A thing to do before a regular event: "Take the garbage out · tonight by 7 PM", for which event,
+ * and a big Done toggle; once done, who did it and when (tap again to undo). Terracotta once late.
+ */
+function PrepRow({ task, now, today, me, onToggle }: { task: PrepTask; now: number; today: Ymd; me: string; onToggle: () => void }) {
+  const { event, occurrence: o, prep, state, tick } = task;
+  const late = state === 'due' || state === 'missed';
+  const done = state === 'done';
+  const when = prepWhen(task.deadline, now);
+  const detail = done && tick
+    ? `Done by ${personName(tick.by, { email: me })} at ${clockWords(toHhmm(tick.at))}`
+    : state === 'missed'
+      ? `Missed: ${midSentence(event.title)} was ${o.time ? `at ${clockWords(o.time)}` : 'today'}`
+      : `For ${midSentence(eventWhen(event, o, today))}`;
+  return (
+    <li className="flex items-center gap-3 py-2.5 sm:gap-4" aria-label={prep.title}>
+      <span className="hidden sm:block">
+        <EventTile kind={event.kind} attention={late} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-lg leading-snug font-semibold text-stone-800 [overflow-wrap:anywhere]">
+          {prep.title}
+          {!done && <span className={late ? 'text-terracotta-dark' : 'font-medium text-forest-700'}> · {state === 'due' ? `was due ${when}` : when}</span>}
+        </p>
+        <p className={`text-base ${late ? 'font-semibold text-terracotta-dark' : 'text-stone-600'}`}>{detail}</p>
+      </div>
+      <button
+        type="button"
+        aria-pressed={done}
+        aria-label={`Done: ${prep.title}`}
+        onClick={onToggle}
+        className={`inline-flex min-h-14 shrink-0 items-center gap-2 rounded-xl border px-4 text-lg font-semibold sm:px-5 transition-colors duration-150 ${
+          done ? 'border-forest-700 bg-forest-700 text-white hover:bg-forest-600' : 'border-stone-200 bg-white text-stone-800 hover:border-forest-400'
+        }`}
+      >
+        <Check size={22} /> Done
       </button>
     </li>
   );

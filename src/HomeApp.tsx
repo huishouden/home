@@ -1,10 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import type { HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
+import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
+import { CalendarSync } from 'lucide-react';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { clockWords } from '@huishouden/pwa-kit/time';
+import { describeRule, type Occurrence } from '@huishouden/pwa-kit/schedule';
+import { SuggestionsCard } from '@huishouden/pwa-kit/react/suggestions';
 import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
 import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
@@ -15,14 +19,18 @@ import { Header, type Tab } from './components/Header';
 import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
+import { EventDialog } from './components/EventDialog';
+import { OccurrenceDialog } from './components/OccurrenceDialog';
+import { fromSeries, hasEventNamed, prepTasks, splitRegular, type PrepTask } from './lib/events';
 import { APP, ROLES } from './lib/contacts';
-import { HOME_CALENDAR_QUERIES, fromCalendar } from './lib/calendarImport';
+import { CALENDAR_WORDS, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
 import { tabFromHash } from './lib/tabs';
 import { Overview, type TabId } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
 import { History } from './screens/History';
 import { Warranties } from './screens/Warranties';
+import { Regular } from './screens/Regular';
 import { Contacts } from './screens/Contacts';
 
 interface Props {
@@ -43,6 +51,7 @@ interface Props {
 const TABS: Tab[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'upkeep', label: 'Upkeep' },
+  { id: 'regular', label: 'Regular' },
   { id: 'history', label: 'History' },
   { id: 'warranties', label: 'Warranties' },
   { id: 'contacts', label: 'Contacts' },
@@ -60,13 +69,37 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const [entry, setEntry] = useState<Editing<ServiceEntry>>(null);
   const [warranty, setWarranty] = useState<Editing<Warranty>>(null);
   const [contact, setContact] = useState<Editing<Contact>>(null);
+  const [regular, setRegular] = useState<{ item: HomeEvent | null; initial?: Partial<EventInput> } | null>(null);
+  const [occurrence, setOccurrence] = useState<{ event: HomeEvent; occurrence: Occurrence } | null>(null);
   const calendar = calendarAvailable(user);
   const { data, actions } = store;
-  const suggested = useCalendarSuggestions({ auth, words: HOME_CALENDAR_QUERIES, isImported: (m) => isImported(m, data.log), app: 'Home' });
+  const suggested = useCalendarSuggestions({
+    auth,
+    words: CALENDAR_WORDS,
+    // Occurrences of a regular event the household already has are not new.
+    isImported: (m) => isImported(m, data.log) || hasEventNamed(data.events, m.title),
+    app: 'Home',
+    limit: 50,
+  });
+  // Garbage, recycling and lawn events that repeat are offered as one regular event; the rest as visits.
+  const { offers, visits } = splitRegular(suggested.suggestions, data.events);
+  const prep = prepTasks(data.events, data.prep, now);
+
+  /** Ticks the thing to do before off, or (when done) undoes it; a tick comes with Undo. */
+  const togglePrep = (t: PrepTask) => {
+    if (t.tick) {
+      actions.untickPrep(t.event, t.occurrence.original);
+      return;
+    }
+    actions.tickPrep(t.event, t.occurrence.original);
+    notify(`Done: ${t.prep.title}`, () => actions.untickPrep(t.event, t.occurrence.original));
+  };
+
+
 
   /** Calendar events into the history as visits: Import from calendar and the new-in-your-calendar card. */
   const importEvents = (list: CalendarMatch[]) => {
-    for (const m of list) actions.saveEntry(null, fromCalendar(m, data.tasks));
+    for (const m of list) actions.saveEntry(null, fromCalendar(m, data.tasks, data.events));
     notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} visits`);
   };
 
@@ -95,9 +128,29 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   else if (tab === 'upkeep')
     content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((t: HomeTask) => setTask({ item: t }))} onDone={markDone} />;
   else if (tab === 'history')
-    content = <History store={store} today={today} calendarAvailable={calendar} onAdd={() => setEntry({ item: null })} onEdit={open((e: ServiceEntry) => setEntry({ item: e }))} onImport={importEvents} />;
+    content = (
+      <History
+        store={store}
+        today={today}
+        calendarAvailable={calendar}
+        onAdd={() => setEntry({ item: null })}
+        onEdit={open((e: ServiceEntry) => setEntry({ item: e }))}
+        onImport={importEvents}
+        onMakeRegular={(s) => setRegular({ item: null, initial: fromSeries(s) })}
+      />
+    );
   else if (tab === 'warranties')
     content = <Warranties store={store} today={today} onAdd={() => setWarranty({ item: null })} onEdit={open((w: Warranty) => setWarranty({ item: w }))} notify={notify} />;
+  else if (tab === 'regular')
+    content = (
+      <Regular
+        store={store}
+        today={today}
+        onAdd={() => setRegular({ item: null })}
+        onEdit={open((e: HomeEvent) => setRegular({ item: e }))}
+        onOpen={(event, o) => setOccurrence({ event, occurrence: o })}
+      />
+    );
   else if (tab === 'contacts')
     content = <Contacts store={store} notify={notify} onAdd={() => setContact({ item: null })} onEdit={(c) => setContact({ item: c })} />;
   else
@@ -111,6 +164,10 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         onEditEntry={open((e: ServiceEntry) => setEntry({ item: e }))}
         onEditWarranty={open((w: Warranty) => setWarranty({ item: w }))}
         onOpen={setTab}
+        prep={prep}
+        now={now}
+        onTogglePrep={togglePrep}
+        onOpenOccurrence={(event, o) => setOccurrence({ event, occurrence: o })}
       />
     );
 
@@ -120,7 +177,21 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
         {tab === 'overview' && store.ready && (
-          <CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
+          <>
+            <SuggestionsCard
+              suggestions={offers}
+              idOf={(o) => o.key}
+              titleOf={(o) => o.title}
+              detailOf={(o) => `${describeRule(o.rule)}${o.time ? ` at ${clockWords(o.time)}` : ''}`}
+              lead="Looks regular"
+              label="Regular events in your calendar"
+              moreLabel="More regular events in your calendar"
+              icon={<CalendarSync size={20} className="shrink-0 text-forest-700" aria-hidden="true" />}
+              onAdd={(o) => setRegular({ item: null, initial: fromSeries(o) })}
+              onDismiss={(o) => o.matches.forEach(suggested.dismiss)}
+            />
+            <CalendarSuggestions suggestions={visits} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
+          </>
         )}
         <div className="min-h-0 flex-1">{content}</div>
       </main>
@@ -192,6 +263,45 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           }
         />
       )}
+      {regular && (
+        <EventDialog
+          event={regular.item}
+          initial={regular.initial}
+          today={today}
+          contacts={data.contacts}
+          onClose={() => setRegular(null)}
+          onSave={(input) => {
+            actions.saveEvent(regular.item?.id ?? null, input);
+            if (!regular.item) notify(`Added ${input.title.trim()}`);
+          }}
+          onDelete={
+            regular.item
+              ? () => {
+                  const gone = regular.item!;
+                  actions.deleteEvent(gone.id);
+                  notify(`Deleted ${gone.title}`, () => actions.restoreEvent(gone));
+                }
+              : undefined
+          }
+        />
+      )}
+      {occurrence && (
+        <OccurrenceDialog
+          event={occurrence.event}
+          occurrence={occurrence.occurrence}
+          today={today}
+          canChange={mayChange(store, occurrence.event)}
+          onClose={() => setOccurrence(null)}
+          onEditSchedule={() => (mayChange(store, occurrence.event) ? setRegular({ item: occurrence.event }) : notify(refusal('edit-others')))}
+          onChange={(change) => {
+            const { event, occurrence: o } = occurrence;
+            actions.changeOccurrence(event, o.original, change);
+            // Undo writes back what this occurrence had before, on the event as it was.
+            const restore = () => actions.changeOccurrence(event, o.original, event.exceptions?.[o.original] ?? null);
+            notify(change?.skipped ? `Skipped ${event.title} this time` : change ? `Moved ${event.title}` : `${event.title} is back on its usual day`, restore);
+          }}
+        />
+      )}
       {contact && (
         <ContactDialog
           contact={contact.item}
@@ -219,3 +329,4 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     </div>
   );
 }
+

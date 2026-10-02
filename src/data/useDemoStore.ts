@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { cleanContact } from '@huishouden/pwa-kit/contacts';
 import { DEMO_MEMBERS, demoData, type HomeData } from '../lib/demo';
 import { doneFromEntry, markDone } from '../lib/done';
-import { serviceDoc, taskDoc, warrantyDoc, type ServiceEntry } from '../lib/model';
+import { eventDoc, prepTickDoc, prepTickId, serviceDoc, taskDoc, warrantyDoc, type ServiceEntry } from '../lib/model';
+import { withOccurrenceChange } from '../lib/events';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import type { HomeActions, HomeStore } from './types';
 
@@ -67,6 +68,22 @@ export function useDemoStore(clock: () => number): HomeStore {
         }),
       deleteWarranty: (wid) => patch((d) => ({ ...d, warranties: without(d.warranties, wid) })),
       restoreWarranty: (w) => patch((d) => ({ ...d, warranties: upsert(d.warranties, w) })),
+      saveEvent: (eid, input) =>
+        patch((d) => {
+          const existing = eid ? d.events.find((e) => e.id === eid) : undefined;
+          return { ...d, events: upsert(d.events, { id: eid ?? id(), ...eventDoc(input, stampFor(existing)) }) };
+        }),
+      deleteEvent: (eid) => patch((d) => ({ ...d, events: without(d.events, eid) })),
+      restoreEvent: (e) => patch((d) => ({ ...d, events: upsert(d.events, e) })),
+      changeOccurrence: (event, original, change) =>
+        patch((d) => {
+          const now = clock();
+          const data = eventDoc(withOccurrenceChange(event, original, change, toYmd(now)), { by: event.by, createdAt: event.createdAt, updatedAt: now });
+          return { ...d, events: upsert(d.events, { id: event.id, ...data }) };
+        }),
+      tickPrep: (event, original) =>
+        patch((d) => ({ ...d, prep: upsert(d.prep, { id: prepTickId(event.id, original), ...prepTickDoc(me, clock()) }) })),
+      untickPrep: (event, original) => patch((d) => ({ ...d, prep: without(d.prep, prepTickId(event.id, original)) })),
       saveContact: (cid, input) =>
         patch((d) => {
           const existing = cid ? d.contacts.find((c) => c.id === cid) : undefined;

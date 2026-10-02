@@ -1,5 +1,6 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
-import type { HomeTask, ServiceEntry, ServiceInput, TaskInput, Warranty, WarrantyInput } from '../lib/model';
+import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, TaskInput, Warranty, WarrantyInput } from '../lib/model';
+import type { OccurrenceChange } from '@huishouden/pwa-kit/schedule';
 import type { HomeData } from '../lib/demo';
 import type { Ymd } from '@huishouden/pwa-kit/time';
 
@@ -21,6 +22,14 @@ export interface HomeActions {
   saveWarranty(id: string | null, input: WarrantyInput): void;
   deleteWarranty(id: string): void;
   restoreWarranty(w: Warranty): void;
+  saveEvent(id: string | null, input: EventInput): void;
+  deleteEvent(id: string): void;
+  restoreEvent(event: HomeEvent): void;
+  /** Moves or skips one occurrence, by the day the schedule put it on; `null` puts it back. The schedule stays as it is. */
+  changeOccurrence(event: HomeEvent, original: Ymd, change: OccurrenceChange | null): void;
+  /** Ticks off the thing to do before one occurrence (by its original day), in the member's name. */
+  tickPrep(event: HomeEvent, original: Ymd): void;
+  untickPrep(event: HomeEvent, original: Ymd): void;
   saveContact(id: string | null, input: ContactInput): void;
   deleteContact(id: string): void;
   /** Puts a deleted contact back under its old id, so jobs and entries that point at it still do. */
