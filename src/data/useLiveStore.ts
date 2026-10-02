@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, deleteDoc, doc, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { deleteDoc, setDoc, writeBatch } from '@huishouden/pwa-kit/firestore';
 import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
 import { addContact, removeContactFromApp, restoreContact, updateContact, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { AGENDA_APP, agendaItems, jobAgenda, jobRef, visitAgenda, visitRef, warrantyAgenda, warrantyRef, type AgendaEntry } from '../lib/agenda';
