@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/huishouden/home/compare/v1.2.1...v1.3.0) (2026-10-02)
+
+
+### Features
+
+* error, speed and anonymous usage reports (pwa-kit observability) ([#14](https://github.com/huishouden/home/issues/14)) ([d8f1fe7](https://github.com/huishouden/home/commit/d8f1fe711c717ea21fa940107de2f99e95e7f1eb))
+* **roles:** helpers tick jobs off and add their own; only admins and members change the rest ([#18](https://github.com/huishouden/home/issues/18)) ([b055c09](https://github.com/huishouden/home/commit/b055c0926ff68ef7f10a8e83dfe45e8e055091a7))
+
 ## [1.2.1](https://github.com/huishouden/home/compare/v1.2.0...v1.2.1) (2026-10-02)
 
 
