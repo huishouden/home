@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { calendarError, isImported, notImported, plainText, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import fixture from './__fixtures__/calendar-matches.json';
-import { calendarError, fromCalendar, guessCategory, isImported, matchTask, notImported, plainText } from './calendarImport';
-import type { HomeTask, ServiceEntry } from './model';
+import { fromCalendar, guessCategory, matchTask } from './calendarImport';
+import { LIMITS, type HomeTask, type ServiceEntry } from './model';
 
 const matches = fixture.matches as CalendarMatch[];
 const [pest, gutter, inspection] = matches;
@@ -66,7 +66,7 @@ describe('a service entry from a calendar event', () => {
   });
 
   test('long descriptions are cut to the notes limit', () => {
-    const out = plainText('word '.repeat(400));
+    const out = plainText('word '.repeat(400), LIMITS.notes);
     expect(out.length).toBeLessThanOrEqual(1000);
     expect(out.endsWith('…')).toBe(true);
   });

@@ -1,14 +1,14 @@
 import { Check, ChevronRight, Plus } from 'lucide-react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { HomeTask, ServiceEntry, Warranty } from '../lib/model';
-import { describeSchedule } from '../lib/schedule';
+import { describeSchedule } from '@huishouden/pwa-kit/schedule';
 import { dueState, dueText, headline, needsAttention, byDue } from '../lib/upkeep';
 import { EXPIRING_DAYS, byExpiry, warrantyState, warrantyText } from '../lib/warranty';
-import { formatMoney } from '../lib/money';
-import { daysBetween, formatDay, formatShort, parseYmd, type Ymd } from '../lib/ymd';
+import { formatCents } from '@huishouden/pwa-kit/money';
+import { daysBetween, longDate, shortDate, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, DateTile, WhoLine } from '../components/bits';
-import { cardClass, ghostButton, overline, primaryButton, secondaryButton } from '../components/ui';
+import { cardClass, ghostButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export type TabId = 'overview' | 'upkeep' | 'history' | 'warranties' | 'contacts';
 
@@ -38,7 +38,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
     const s = warrantyState(w.warrantyEnd, today);
     return s.state === 'expiring';
   });
-  const year = parseYmd(today)!.y;
+  const year = ymdParts(today)!.y;
   const thisYear = log.filter((e) => e.date.startsWith(`${year}-`) && daysBetween(e.date, today) >= 0);
   const spent = thisYear.reduce((sum, e) => sum + (e.costCents ?? 0), 0);
 
@@ -139,7 +139,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
               {thisYear.length} {thisYear.length === 1 ? 'entry' : 'entries'} in the history
             </p>
           </div>
-          <p className="text-3xl font-semibold text-stone-800 tabular-nums">{formatMoney(spent, { headline: true })}</p>
+          <p className="text-3xl font-semibold text-stone-800 tabular-nums">{formatCents(spent, { headline: true })}</p>
         </section>
       </div>
     </div>
@@ -150,8 +150,8 @@ function relative(date: Ymd, today: Ymd): string {
   const d = daysBetween(today, date);
   if (d === 0) return 'Today';
   if (d === 1) return 'Tomorrow';
-  if (d < 7) return formatDay(date, today).split(',')[0];
-  return formatShort(date, today);
+  if (d < 7) return longDate(date, today).split(',')[0];
+  return shortDate(date, today);
 }
 
 function Lead({ task, today, contact, onDone, onEdit }: { task: HomeTask; today: Ymd; contact?: Contact; onDone: () => void; onEdit: () => void }) {
@@ -165,7 +165,7 @@ function Lead({ task, today, contact, onDone, onEdit }: { task: HomeTask; today:
           <p className={`text-3xl leading-tight font-semibold tracking-tight sm:text-4xl ${late ? 'text-terracotta-dark' : 'text-stone-800'}`}>{headline(task.title, task.due, today)}</p>
           <p className="mt-2 text-lg text-stone-600 sm:text-xl">
             {late ? 'Was due ' : ''}
-            {formatDay(task.due, today)} · {describeSchedule(task.schedule)}
+            {longDate(task.due, today)} · {describeSchedule(task.schedule)}
           </p>
         </button>
       </div>

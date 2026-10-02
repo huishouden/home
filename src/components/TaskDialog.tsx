@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { CATEGORIES, CATEGORY_LABELS, LIMITS, type Category, type HomeTask, type TaskInput } from '../lib/model';
-import { MAX_EVERY, UNITS, describeSchedule, firstDue, occurrenceOnOrAfter, type Schedule, type Unit } from '../lib/schedule';
+import { MAX_EVERY, UNITS, describeSchedule, firstDue, occurrenceOnOrAfter, type Schedule, type Unit } from '@huishouden/pwa-kit/schedule';
 import { guessCategory } from '../lib/calendarImport';
-import { formatDay, isYmd, toYmd, type Ymd } from '../lib/ymd';
-import { CalendarFind, ContactSelect, DeleteButton, LinkedEvent } from './bits';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { isYmd, longDate, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
+import { ContactSelect, DeleteButton } from './bits';
+import { auth } from '../data/firebase';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 const UNIT_LABELS: Record<Unit, [string, string]> = { day: ['day', 'days'], week: ['week', 'weeks'], month: ['month', 'months'], year: ['year', 'years'] };
 
@@ -180,7 +182,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
             </label>
           </div>
           {kind === 'fixed' ? (
-            <Field label="Starting on" hint={schedule && nextDue ? `${describeSchedule(schedule)}. Next due ${formatDay(nextDue, today)}.` : undefined}>
+            <Field label="Starting on" hint={schedule && nextDue ? `${describeSchedule(schedule)}. Next due ${longDate(nextDue, today)}.` : undefined}>
               <input className={inputClass} type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} />
             </Field>
           ) : (
@@ -191,6 +193,8 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
         </fieldset>
 
         <CalendarFind
+          auth={auth}
+          app="Home"
           query={title}
           available={calendarAvailable}
           onPick={(m) => {

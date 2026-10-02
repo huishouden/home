@@ -2,16 +2,17 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
-import { formatShort, toYmd } from './lib/ymd';
-import { useClock } from './clock';
+import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
+import { useClock } from '@huishouden/pwa-kit/react/clock';
+import { calendarAvailable } from '@huishouden/pwa-kit/react/calendar';
+import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
+import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import type { HomeStore } from './data/types';
-import { calendarAvailable } from './data/calendar';
 import { Header, type Tab } from './components/Header';
 import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
-import { ContactDialog } from './components/ContactDialog';
-import { Toast, type ToastState } from './components/ui';
+import { APP, ROLES } from './lib/contacts';
 import { Overview, type TabId } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
 import { History } from './screens/History';
@@ -59,7 +60,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
 
   const markDone = (t: HomeTask) => {
     const { entryId, next } = actions.markDone(t, today);
-    notify(`Done: ${t.title}. Next due ${formatShort(next, today)}.`, () => actions.undoDone(t, entryId));
+    notify(`Done: ${t.title}. Next due ${shortDate(next, today)}.`, () => actions.undoDone(t, entryId));
   };
 
   let content: ReactNode;
@@ -164,6 +165,9 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
       {contact && (
         <ContactDialog
           contact={contact.item}
+          app={APP}
+          roles={ROLES}
+          namePlaceholder="Example Lawn Care"
           onClose={() => setContact(null)}
           onSave={(input) => {
             actions.saveContact(contact.item?.id ?? null, input);

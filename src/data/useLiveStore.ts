@@ -4,7 +4,8 @@ import { addContact, removeContactFromApp, restoreContact, updateContact, watchC
 import { APP } from '../lib/contacts';
 import { doneFromEntry, markDone } from '../lib/done';
 import { serviceDoc, taskDoc, warrantyDoc, withoutId, type HomeTask, type ServiceEntry, type Warranty } from '../lib/model';
-import { toYmd } from '../lib/ymd';
+import { toYmd } from '@huishouden/pwa-kit/time';
+import { readError } from '@huishouden/pwa-kit/feedback';
 import { db } from './firebase';
 import type { HomeActions, HomeStore } from './types';
 
@@ -104,11 +105,4 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
   }, [base, householdId, me]);
 
   return { data: { tasks, log, warranties, contacts }, ready, actions, me };
-}
-
-export function readError(e: unknown, prefix: string): string {
-  const code = (e as { code?: string })?.code;
-  if (code === 'permission-denied') return `${prefix}: this household doesn't allow it yet.`;
-  if (code === 'unavailable') return `${prefix}: offline. It will retry when the connection is back.`;
-  return `${prefix}.`;
 }

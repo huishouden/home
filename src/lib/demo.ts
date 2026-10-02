@@ -1,7 +1,7 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { Category, HomeTask, ServiceEntry, Warranty } from './model';
-import { firstDue, type Schedule } from './schedule';
-import { addDays, addMonths, toYmd, type Ymd } from './ymd';
+import { firstDue, type Schedule } from '@huishouden/pwa-kit/schedule';
+import { addDays, addMonths, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 
 // Invented sample data for the signed-out app: README screenshots and first impressions. Everything
 // sits around one fixed day in 2031; providers are "Example …" businesses on example.com with
