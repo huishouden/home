@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { expectCleanLoad, expectGoogleSignInPopup, expectHuishoudenFrame, expectInstallable } from '@huishouden/pwa-kit/e2e';
+import {
+  expectCleanLoad,
+  expectCompactSampleBanner,
+  expectGoogleSignInPopup,
+  expectHuishoudenFrame,
+  expectInstallable,
+  expectSecurityHeaders,
+} from '@huishouden/pwa-kit/e2e';
 
 test('loads without runtime errors and shows the sample house', async ({ page }) => {
   await expectCleanLoad(page);
@@ -22,3 +29,7 @@ test('link previews describe the app and show its image', async ({ page, request
   expect(image).toMatch(/^https:\/\/huishouden-home\.web\.app\/og\.png/);
   expect((await request.get('/og.png')).ok()).toBe(true);
 });
+
+test('sends the security headers and leaves sign-in un-framed', ({ request }) => expectSecurityHeaders(request, '/', { camera: true }));
+
+test('the Sample data banner is one line on a phone', ({ page }) => expectCompactSampleBanner(page, '/'));
