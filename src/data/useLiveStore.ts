@@ -5,7 +5,7 @@ import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/age
 import { addContact, removeContactFromApp, restoreContact, updateContact, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { AGENDA_APP, agendaItems, jobAgenda, jobRef, visitAgenda, visitRef, warrantyAgenda, warrantyRef, type AgendaEntry } from '../lib/agenda';
 import { APP } from '../lib/contacts';
-import { doneFromEntry, markDone } from '../lib/done';
+import { doneFromEntry, markDone, tickedTask } from '../lib/done';
 import { serviceDoc, taskDoc, warrantyDoc, withoutId, type HomeTask, type ServiceEntry, type Warranty } from '../lib/model';
 import { toYmd } from '@huishouden/pwa-kit/time';
 import { readError } from '@huishouden/pwa-kit/feedback';
@@ -21,7 +21,7 @@ const WARRANTIES = 'homeWarranties';
  * Live household data from Firestore with onSnapshot listeners. Writes are fire-and-forget: the
  * persistent cache applies them locally at once (also offline) and syncs later.
  */
-export function useLiveStore(householdId: string, me: string, onError: (message: string) => void): HomeStore {
+export function useLiveStore(householdId: string, me: string, onError: (message: string) => void, restricted = false): HomeStore {
   const [tasks, setTasks] = useState<HomeTask[]>([]);
   const [log, setLog] = useState<ServiceEntry[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
@@ -63,11 +63,11 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           setContacts(c);
           answered('contacts');
         },
-        { app: APP, onError: fail('the contacts') },
+        { app: APP, restricted, onError: fail('the contacts') },
       ),
     ];
     return () => unsubs.forEach((u) => u());
-  }, [base, householdId]);
+  }, [base, householdId, restricted]);
 
   // Once per open, with every list loaded: makes the household agenda match Home's data, which also
   // repairs what another device or an older version left and moves jobs to overdue as days pass.
@@ -77,14 +77,14 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     if (!allLoaded || synced.current) return;
     synced.current = true;
     const now = Date.now();
-    syncAgenda(db, householdId, AGENDA_APP, agendaItems(current.current, now), { by: me, now }).catch((e) => console.warn("Couldn't update the household agenda", e));
-  }, [allLoaded, householdId, me]);
+    syncAgenda(db, householdId, AGENDA_APP, agendaItems(current.current, now), { by: me, restricted, now }).catch((e) => console.warn("Couldn't update the household agenda", e));
+  }, [allLoaded, householdId, me, restricted]);
 
   const actions = useMemo<HomeActions>(() => {
     // The agenda follows each save; a failure there never fails the save (the next open repairs it).
     const publish = (ref: string, items: AgendaEntry[]) =>
-      void replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me }).catch((e) => console.warn("Couldn't update the household agenda", e));
-    const unpublish = (ref: string) => void removeAgenda(db, householdId, AGENDA_APP, ref).catch((e) => console.warn("Couldn't update the household agenda", e));
+      void replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }).catch((e) => console.warn("Couldn't update the household agenda", e));
+    const unpublish = (ref: string) => void removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch((e) => console.warn("Couldn't update the household agenda", e));
     const publishJob = (task: HomeTask, contacts = current.current.contacts) => publish(jobRef(task.id), jobAgenda(task, contacts, Date.now()));
     const publishVisit = (entry: ServiceEntry, contacts = current.current.contacts) => publish(visitRef(entry.id), visitAgenda(entry, contacts, Date.now()));
     const publishWarranty = (w: Warranty) => publish(warrantyRef(w.id), warrantyAgenda(w, Date.now()));
@@ -115,7 +115,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
         const { due, lastDone, entry } = markDone(task, doneOn);
         const entryRef = ref(LOG);
         const batch = writeBatch(db);
-        const moved = { ...task, due, lastDone, updatedAt: Date.now() };
+        const moved = tickedTask(task, { due, lastDone }, Date.now());
         batch.set(ref(TASKS, task.id), withoutId(moved));
         batch.set(entryRef, serviceDoc(entry, { by: me, createdAt: Date.now() }));
         report(batch.commit());
@@ -138,7 +138,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
         batch.set(entryRef, data);
         const task = !existing && data.taskId ? current.current.tasks.find((t) => t.id === data.taskId) : undefined;
         const moved = task ? doneFromEntry(task, data.date, toYmd(Date.now())) : null;
-        const movedTask = task && moved ? { ...task, ...moved, updatedAt: Date.now() } : null;
+        const movedTask = task && moved ? tickedTask(task, moved, Date.now()) : null;
         if (movedTask) batch.set(ref(TASKS, movedTask.id), withoutId(movedTask));
         report(batch.commit());
         publishVisit({ id: entryRef.id, ...data });
@@ -182,7 +182,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
       },
       restoreContact: (c) => report(restoreContact(db, householdId, c)),
     };
-  }, [base, householdId, me]);
+  }, [base, householdId, me, restricted]);
 
   return { data: { tasks, log, warranties, contacts }, ready, actions, me };
 }

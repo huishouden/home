@@ -5,7 +5,8 @@ import { HOME_CALENDAR_QUERIES } from '../lib/calendarImport';
 import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import { formatCents } from '@huishouden/pwa-kit/money';
 import { daysBetween, longDate, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
-import type { HomeStore } from '../data/types';
+import { mayChange, type HomeStore } from '../data/types';
+import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { auth } from '../data/firebase';
 import { DateTile, WhoLine } from '../components/bits';
 import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
@@ -56,6 +57,7 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
           <CalendarHint app="Home" available={calendarAvailable} />
         </div>
       </div>
+      {store.helping && <RoleNote action="edit-others" />}
 
       {booked.length > 0 && (
         <section aria-label="Booked visits">
@@ -130,9 +132,11 @@ function Entry({ entry: e, today, store, strong, onEdit }: { entry: ServiceEntry
           </a>
         )}
       </div>
-      <button type="button" className={iconButton} onClick={onEdit} aria-label={`Edit ${e.title}`}>
-        <Pencil size={18} />
-      </button>
+      {mayChange(store, e) && (
+        <button type="button" className={iconButton} onClick={onEdit} aria-label={`Edit ${e.title}`}>
+          <Pencil size={18} />
+        </button>
+      )}
     </li>
   );
 }

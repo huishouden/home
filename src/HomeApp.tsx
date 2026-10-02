@@ -8,7 +8,9 @@ import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
 import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
-import type { HomeStore } from './data/types';
+import { refusal } from '@huishouden/pwa-kit/roles';
+import type { RoleState } from '@huishouden/pwa-kit/react/roles';
+import { mayChange, type HomeStore } from './data/types';
 import { Header, type Tab } from './components/Header';
 import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
@@ -34,6 +36,8 @@ interface Props {
   clearToast: () => void;
   /** Shown above the content: the sample-data banner. */
   banner?: ReactNode;
+  /** The signed-in person's role; the demo has none (everything allowed). */
+  role?: RoleState;
 }
 
 const TABS: Tab[] = [
@@ -47,7 +51,7 @@ const TABS: Tab[] = [
 type Editing<T> = { item: T | null; initial?: Partial<ServiceInput> } | null;
 
 /** Everything inside the frame once there is data to show (live or sample). */
-export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner }: Props) {
+export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, role }: Props) {
   const { now } = useClock();
   const today = toYmd(now);
   // Agenda links open a screen: #upkeep, #history, #warranties.
@@ -75,6 +79,12 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     return () => window.removeEventListener('hashchange', follow);
   }, []);
 
+  // A helper or kid opening someone else's record is told who can change it rather than given a form.
+  const open =
+    <T extends { by?: string }>(show: (item: T) => void) =>
+    (item: T) =>
+      mayChange(store, item) ? show(item) : notify(refusal('edit-others'));
+
   const markDone = (t: HomeTask) => {
     const { entryId, next } = actions.markDone(t, today);
     notify(`Done: ${t.title}. Next due ${shortDate(next, today)}.`, () => actions.undoDone(t, entryId));
@@ -83,11 +93,11 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the house</p>;
   else if (tab === 'upkeep')
-    content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={(t) => setTask({ item: t })} onDone={markDone} />;
+    content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((t: HomeTask) => setTask({ item: t }))} onDone={markDone} />;
   else if (tab === 'history')
-    content = <History store={store} today={today} calendarAvailable={calendar} onAdd={() => setEntry({ item: null })} onEdit={(e) => setEntry({ item: e })} onImport={importEvents} />;
+    content = <History store={store} today={today} calendarAvailable={calendar} onAdd={() => setEntry({ item: null })} onEdit={open((e: ServiceEntry) => setEntry({ item: e }))} onImport={importEvents} />;
   else if (tab === 'warranties')
-    content = <Warranties store={store} today={today} onAdd={() => setWarranty({ item: null })} onEdit={(w) => setWarranty({ item: w })} notify={notify} />;
+    content = <Warranties store={store} today={today} onAdd={() => setWarranty({ item: null })} onEdit={open((w: Warranty) => setWarranty({ item: w }))} notify={notify} />;
   else if (tab === 'contacts')
     content = <Contacts store={store} notify={notify} onAdd={() => setContact({ item: null })} onEdit={(c) => setContact({ item: c })} />;
   else
@@ -96,10 +106,10 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         store={store}
         today={today}
         onDone={markDone}
-        onEditTask={(t) => setTask({ item: t })}
+        onEditTask={open((t: HomeTask) => setTask({ item: t }))}
         onAddTask={() => setTask({ item: null })}
-        onEditEntry={(e) => setEntry({ item: e })}
-        onEditWarranty={(w) => setWarranty({ item: w })}
+        onEditEntry={open((e: ServiceEntry) => setEntry({ item: e }))}
+        onEditWarranty={open((w: Warranty) => setWarranty({ item: w }))}
         onOpen={setTab}
       />
     );
@@ -188,6 +198,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           app={APP}
           roles={ROLES}
           namePlaceholder="Example Lawn Care"
+          canMarkPrivate={!role || role.can('see-private')}
           onClose={() => setContact(null)}
           onSave={(input) => {
             actions.saveContact(contact.item?.id ?? null, input);

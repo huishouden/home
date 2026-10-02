@@ -2,7 +2,8 @@ import { UserPlus } from 'lucide-react';
 import { groupContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { ContactCard } from '@huishouden/pwa-kit/react/contacts';
 import { ROLES } from '../lib/contacts';
-import type { HomeStore } from '../data/types';
+import { mayChange, type HomeStore } from '../data/types';
+import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { cardClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** The service providers: everyone the house may need, one tap from a call or a map. */
@@ -22,6 +23,7 @@ export function Contacts({ store, onAdd, onEdit, notify }: {
           <UserPlus size={20} /> Add contact
         </button>
       </div>
+      {store.helping && <RoleNote action="edit-others" />}
       {groups.length === 0 && (
         <p className={`${cardClass} p-6 text-lg text-stone-600`}>No service providers yet. Add the lawn service, pest control and plumber so their numbers are one tap away.</p>
       )}
@@ -32,11 +34,15 @@ export function Contacts({ store, onAdd, onEdit, notify }: {
               key={c.id}
               contact={c}
               role={g.role}
-              onEdit={() => onEdit(c)}
-              onDelete={() => {
-                store.actions.deleteContact(c.id);
-                notify(`Deleted ${c.name}`, () => store.actions.restoreContact(c));
-              }}
+              onEdit={mayChange(store, c) ? () => onEdit(c) : undefined}
+              onDelete={
+                mayChange(store, c)
+                  ? () => {
+                      store.actions.deleteContact(c.id);
+                      notify(`Deleted ${c.name}`, () => store.actions.restoreContact(c));
+                    }
+                  : undefined
+              }
             />
           )),
         )}

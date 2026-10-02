@@ -116,3 +116,28 @@ test('phone: upkeep', async ({ page }) => {
     },
   });
 });
+
+// Roles: a helper ticks jobs off and adds their own, and is told who changes the rest.
+test('a helper’s upkeep', ({ page }) =>
+  captureScreenshot(page, 'helper-upkeep', {
+    path: '/?as=helper',
+    fixedTime,
+    prepare: async (p) => {
+      await tab('Upkeep')(p);
+      await expect(p.getByText('Only admins and members can change or delete what someone else added.')).toBeVisible();
+      // Opening someone else's job says who can change it instead of opening the form.
+      await p.getByRole('button', { name: 'Dryer vent cleaning', exact: true }).click();
+      await expect(p.getByText('Only admins and members can change or delete what someone else added.')).toHaveCount(2);
+      await expect(p.getByRole('dialog')).toHaveCount(0);
+    },
+  }));
+
+test('a helper’s warranties', ({ page }) =>
+  captureScreenshot(page, 'helper-warranties', {
+    path: '/?as=helper',
+    fixedTime,
+    prepare: async (p) => {
+      await tab('Warranties')(p);
+      await expect(p.getByText('Only admins and members can change or delete what someone else added.')).toBeVisible();
+    },
+  }));

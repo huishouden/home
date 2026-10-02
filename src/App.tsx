@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { signInSilently } from '@huishouden/pwa-kit/auth';
-import { markJoined, saveMyProfile, watchHousehold, type HouseholdState } from '@huishouden/pwa-kit/household';
+import { markJoined, saveMyProfile, watchHousehold, type Household, type HouseholdState } from '@huishouden/pwa-kit/household';
+import { useRole } from '@huishouden/pwa-kit/react/roles';
 import { auth, db, googleClientId, signInWithGoogle, signOutEverywhere } from './data/firebase';
 import { useLiveStore } from './data/useLiveStore';
 import { useDemoStore } from './data/useDemoStore';
@@ -65,7 +66,7 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
     if (householdId) saveMyProfile(db, householdId, user).catch(() => {});
   }, [householdId, user]);
 
-  if (state.status === 'ready') return <LiveApp householdId={state.household.id} user={user} {...frame} />;
+  if (state.status === 'ready') return <LiveApp household={state.household} user={user} {...frame} />;
   if (state.status === 'loading') return <Plain user={user} {...frame}>Finding your household.</Plain>;
   if (state.status === 'error')
     return (
@@ -87,13 +88,17 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
   );
 }
 
-function LiveApp({ householdId, user, ...frame }: FrameProps & { householdId: string; user: User }) {
+function LiveApp({ household, user, ...frame }: FrameProps & { household: Household; user: User }) {
   const { toast, notify, fail, clear } = useToast();
-  const store = useLiveStore(householdId, (user.email ?? '').toLowerCase(), fail);
+  const me = (user.email ?? '').toLowerCase();
+  // Helpers and kids (pwa-kit STANDARD.md "Roles") read only open contacts and change only what they added.
+  const role = useRole(household, me);
+  const live = useLiveStore(household.id, me, fail, role.restricted);
+  const store = useMemo(() => ({ ...live, helping: !role.can('edit-others') }), [live, role]);
   const read = useCallback(() => Date.now(), []);
   return (
     <ClockProvider read={read}>
-      <HomeApp store={store} user={user} {...frame} toast={toast} notify={notify} clearToast={clear} />
+      <HomeApp store={store} user={user} {...frame} toast={toast} notify={notify} clearToast={clear} role={role} />
     </ClockProvider>
   );
 }
@@ -112,7 +117,10 @@ function DemoApp({ signInError, ...frame }: FrameProps & { signInError: string |
 
 function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => number; signInError: string | null }) {
   const { toast, notify, clear } = useToast();
-  const store = useDemoStore(read);
+  const demo = useDemoStore(read);
+  // `?as=helper` shows the sample house as a helper sees it (the README's screenshots, and trying it).
+  const asHelper = new URLSearchParams(window.location.search).get('as') === 'helper';
+  const store = useMemo(() => (asHelper ? { ...demo, me: 'sitter@example.com', helping: true } : demo), [demo, asHelper]);
   const banner = (
     <div className={`${cardClass} flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5`} role="note">
       <span className="rounded-full bg-terracotta-light px-3 py-1 text-sm font-semibold text-terracotta-dark">Sample data</span>
