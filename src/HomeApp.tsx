@@ -4,7 +4,8 @@ import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
-import { calendarAvailable } from '@huishouden/pwa-kit/react/calendar';
+import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
 import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import type { HomeStore } from './data/types';
@@ -13,6 +14,8 @@ import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
 import { APP, ROLES } from './lib/contacts';
+import { HOME_CALENDAR_QUERIES, fromCalendar } from './lib/calendarImport';
+import { auth } from './data/firebase';
 import { tabFromHash } from './lib/tabs';
 import { Overview, type TabId } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
@@ -55,6 +58,13 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const [contact, setContact] = useState<Editing<Contact>>(null);
   const calendar = calendarAvailable(user);
   const { data, actions } = store;
+  const suggested = useCalendarSuggestions({ auth, words: HOME_CALENDAR_QUERIES, isImported: (m) => isImported(m, data.log), app: 'Home' });
+
+  /** Calendar events into the history as visits: Import from calendar and the new-in-your-calendar card. */
+  const importEvents = (list: CalendarMatch[]) => {
+    for (const m of list) actions.saveEntry(null, fromCalendar(m, data.tasks));
+    notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} visits`);
+  };
 
   useEffect(() => {
     document.title = 'Huishouden Home';
@@ -75,7 +85,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   else if (tab === 'upkeep')
     content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={(t) => setTask({ item: t })} onDone={markDone} />;
   else if (tab === 'history')
-    content = <History store={store} today={today} calendarAvailable={calendar} onAdd={() => setEntry({ item: null })} onEdit={(e) => setEntry({ item: e })} notify={notify} />;
+    content = <History store={store} today={today} calendarAvailable={calendar} onAdd={() => setEntry({ item: null })} onEdit={(e) => setEntry({ item: e })} onImport={importEvents} />;
   else if (tab === 'warranties')
     content = <Warranties store={store} today={today} onAdd={() => setWarranty({ item: null })} onEdit={(w) => setWarranty({ item: w })} notify={notify} />;
   else if (tab === 'contacts')
@@ -99,6 +109,9 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
       <Header tabs={TABS} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
+        {tab === 'overview' && store.ready && (
+          <CalendarSuggestions suggestions={suggested.suggestions} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
+        )}
         <div className="min-h-0 flex-1">{content}</div>
       </main>
 
