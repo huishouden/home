@@ -6,6 +6,8 @@ import { shortDate, type Ymd } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, WhoLine } from '../components/bits';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { RoleNote } from '@huishouden/pwa-kit/react/roles';
+import { mayChange } from '../data/types';
 
 /** Every recurring job, soonest first, grouped by how soon. */
 export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
@@ -31,6 +33,7 @@ export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
           <Plus size={20} /> Add job
         </button>
       </div>
+      {store.helping && <RoleNote action="edit-others" />}
       {tasks.length === 0 && (
         <p className={`${cardClass} p-6 text-lg text-stone-600`}>No upkeep jobs yet. Add the filter change, pest control, gutters and renewals so the house reminds you.</p>
       )}
@@ -62,9 +65,11 @@ export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
                     <button type="button" className={secondaryButton} onClick={() => onDone(t)} aria-label={`Mark done: ${t.title}`}>
                       <Check size={18} /> <span className="hidden sm:inline">Done</span>
                     </button>
-                    <button type="button" className={iconButton.replace('inline-flex', 'hidden sm:inline-flex')} onClick={() => onEdit(t)} aria-label={`Edit ${t.title}`}>
-                      <Pencil size={18} />
-                    </button>
+                    {mayChange(store, t) && (
+                      <button type="button" className={iconButton.replace('inline-flex', 'hidden sm:inline-flex')} onClick={() => onEdit(t)} aria-label={`Edit ${t.title}`}>
+                        <Pencil size={18} />
+                      </button>
+                    )}
                   </div>
                 </li>
               );

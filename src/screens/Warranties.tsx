@@ -2,7 +2,8 @@ import { BookOpen, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 import type { Warranty } from '../lib/model';
 import { byExpiry, warrantyState, warrantyText } from '../lib/warranty';
 import { shortDate, type Ymd } from '@huishouden/pwa-kit/time';
-import type { HomeStore } from '../data/types';
+import { mayChange, type HomeStore } from '../data/types';
+import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { WhoLine } from '../components/bits';
 import { cardClass, iconButton, linkClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
@@ -24,6 +25,7 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
           <Plus size={20} /> Add item
         </button>
       </div>
+      {store.helping && <RoleNote action="edit-others" />}
       {sorted.length === 0 && (
         <p className={`${cardClass} p-6 text-lg text-stone-600`}>No appliances yet. Add the fridge, water heater and the rest with their receipts, so the warranty is easy to find.</p>
       )}
@@ -39,20 +41,24 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
                   <h3 className="text-xl font-semibold text-stone-800 [overflow-wrap:anywhere]">{w.item}</h3>
                   {w.details && <p className="text-base text-stone-600 [overflow-wrap:anywhere]">{w.details}</p>}
                 </div>
-                <button type="button" className={iconButton} onClick={() => onEdit(w)} aria-label={`Edit ${w.item}`}>
-                  <Pencil size={18} />
-                </button>
-                <button
-                  type="button"
-                  className={iconButton}
-                  onClick={() => {
-                    store.actions.deleteWarranty(w.id);
-                    notify(`Deleted ${w.item}`, () => store.actions.restoreWarranty(w));
-                  }}
-                  aria-label={`Delete ${w.item}`}
-                >
-                  <Trash2 size={18} />
-                </button>
+                {mayChange(store, w) && (
+                  <>
+                    <button type="button" className={iconButton} onClick={() => onEdit(w)} aria-label={`Edit ${w.item}`}>
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className={iconButton}
+                      onClick={() => {
+                        store.actions.deleteWarranty(w.id);
+                        notify(`Deleted ${w.item}`, () => store.actions.restoreWarranty(w));
+                      }}
+                      aria-label={`Delete ${w.item}`}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </>
+                )}
               </div>
               <p className={`mt-2 text-lg ${tone}`}>{warrantyText(w.warrantyEnd, today)}</p>
               <p className="text-base text-stone-600">

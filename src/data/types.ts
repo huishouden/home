@@ -34,4 +34,12 @@ export interface HomeStore {
   actions: HomeActions;
   /** The signed-in member's email (or the demo's). */
   me: string;
+  /**
+   * The signed-in person is a helper or kid (pwa-kit STANDARD.md "Roles"): they add and tick off,
+   * and change or delete only what they added. Unset for admins, members and the demo.
+   */
+  helping?: boolean;
 }
+
+/** Whether the person may change or delete a record: anyone but a helper or kid, or its author. */
+export const mayChange = (store: Pick<HomeStore, 'helping' | 'me'>, record: { by?: string }) => !store.helping || record.by === store.me;

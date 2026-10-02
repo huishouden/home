@@ -21,3 +21,14 @@ export function doneFromEntry(task: HomeTask, date: Ymd, today: Ymd): { due: Ymd
   const { due, lastDone } = markDone(task, date);
   return { due, lastDone };
 }
+
+/**
+ * The fields that tick a job off. Helpers and kids may mark anyone's job done, and the rules let
+ * them change only these on a job someone else added (huishouden/rules README "Roles").
+ */
+export const TICK_FIELDS = ['due', 'lastDone', 'updatedAt'] as const;
+
+/** The job as it is after being done on a day: only the tick fields change, `by` stays its author. */
+export function tickedTask(task: HomeTask, done: { due: Ymd; lastDone: Ymd }, now: number): HomeTask {
+  return { ...task, due: done.due, lastDone: done.lastDone, updatedAt: now };
+}
