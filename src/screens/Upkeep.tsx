@@ -1,11 +1,11 @@
 import { Check, Pencil, Plus } from 'lucide-react';
 import type { HomeTask } from '../lib/model';
-import { describeSchedule } from '../lib/schedule';
+import { describeSchedule } from '@huishouden/pwa-kit/schedule';
 import { SOON_DAYS, byDue, dueState, dueText, lastDoneText } from '../lib/upkeep';
-import { formatShort, type Ymd } from '../lib/ymd';
+import { shortDate, type Ymd } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, WhoLine } from '../components/bits';
-import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '../components/ui';
+import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Every recurring job, soonest first, grouped by how soon. */
 export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
@@ -50,7 +50,7 @@ export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
                         {t.title}
                       </button>
                       <p className={`text-base ${late ? 'font-semibold text-terracotta-dark' : 'font-medium text-forest-700'}`}>
-                        {dueText(t.due, today)} <span className="font-normal text-stone-600">· {formatShort(t.due, today)}</span>
+                        {dueText(t.due, today)} <span className="font-normal text-stone-600">· {shortDate(t.due, today)}</span>
                       </p>
                     </div>
                     <p className="mt-0.5 text-base text-stone-600">

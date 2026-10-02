@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import { DEMO_NOW, DEMO_TODAY, demoData } from './demo';
-import { isSchedule } from './schedule';
+import { isSchedule } from '@huishouden/pwa-kit/schedule';
 import { headline, needsAttention } from './upkeep';
 import { warrantyText } from './warranty';
-import { daysBetween } from './ymd';
+import { daysBetween } from '@huishouden/pwa-kit/time';
 
 const d = demoData();
 

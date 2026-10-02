@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { LIMITS, type HomeTask, type ServiceEntry, type ServiceInput } from '../lib/model';
-import { centsToInput, parseMoney } from '../lib/money';
-import { matchTask, plainText } from '../lib/calendarImport';
-import { daysBetween, isYmd, toYmd, type Ymd } from '../lib/ymd';
-import { CalendarFind, ContactSelect, DeleteButton, LinkedEvent } from './bits';
-import { Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { centsToInput, parseCents } from '@huishouden/pwa-kit/money';
+import { plainText } from '@huishouden/pwa-kit/calendar';
+import { matchTask } from '../lib/calendarImport';
+import { daysBetween, isYmd, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
+import { ContactSelect, DeleteButton } from './bits';
+import { auth } from '../data/firebase';
+import { Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Add or edit a history entry: a visit or job on a day, who did it, what it cost. Future days are booked visits. */
 export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAvailable, onSave, onDelete, onClose }: {
@@ -29,7 +32,7 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
   const [cost, setCost] = useState(centsToInput(start?.costCents));
   const [notes, setNotes] = useState(start?.notes ?? '');
   const [event, setEvent] = useState(start?.calendarEventId || start?.calendarLink ? { id: start.calendarEventId, link: start.calendarLink } : null);
-  const costCents = parseMoney(cost);
+  const costCents = parseCents(cost);
   const valid = title.trim().length > 0 && isYmd(date) && costCents !== null;
   const booked = isYmd(date) && daysBetween(today, date) > 0;
   const linkedTask = tasks.find((t) => t.id === taskId);
@@ -92,11 +95,13 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
           <input className={inputClass} value={title} maxLength={LIMITS.title} onChange={(e) => setTitle(e.target.value)} placeholder="Pest control visit" />
         </Field>
         <CalendarFind
+          auth={auth}
+          app="Home"
           query={title}
           available={calendarAvailable}
           onPick={(m) => {
             setDate(toYmd(m.start));
-            const text = plainText([m.location?.trim(), plainText(m.description ?? '')].filter(Boolean).join('\n'));
+            const text = plainText([m.location?.trim(), plainText(m.description ?? '')].filter(Boolean).join('\n'), LIMITS.notes);
             if (text && !notes.trim()) setNotes(text);
             const t = !taskId ? matchTask(m.title, tasks) : undefined;
             if (t) pickTask(t.id);

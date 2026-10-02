@@ -1,7 +1,7 @@
 import type { Contact, ContactInput } from '@huishouden/pwa-kit/contacts';
 import type { HomeTask, ServiceEntry, ServiceInput, TaskInput, Warranty, WarrantyInput } from '../lib/model';
 import type { HomeData } from '../lib/demo';
-import type { Ymd } from '../lib/ymd';
+import type { Ymd } from '@huishouden/pwa-kit/time';
 
 export type { HomeData };
 

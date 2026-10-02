@@ -6,11 +6,10 @@ import { auth, db, googleClientId, signInWithGoogle, signOutEverywhere } from '.
 import { useLiveStore } from './data/useLiveStore';
 import { useDemoStore } from './data/useDemoStore';
 import { DEMO_NOW } from './lib/demo';
-import { ClockProvider } from './clock';
+import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
 import { HomeApp } from './HomeApp';
 import { Header } from './components/Header';
-import { cardClass, primaryButton } from './components/ui';
-import { useToast } from './useToast';
+import { cardClass, primaryButton, useToast } from '@huishouden/pwa-kit/react/ui';
 import { PORTAL_URL } from './lib/portal';
 
 export default function App() {

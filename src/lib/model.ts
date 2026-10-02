@@ -1,6 +1,6 @@
-import { isSchedule, type Schedule } from './schedule';
-import { MAX_CENTS } from './money';
-import { isYmd, type Ymd } from './ymd';
+import { isSchedule, type Schedule } from '@huishouden/pwa-kit/schedule';
+import { MAX_CENTS } from '@huishouden/pwa-kit/money';
+import { isYmd, type Ymd } from '@huishouden/pwa-kit/time';
 
 // Firestore shapes under households/{householdId}. The project's rules accept exactly these keys,
 // so writers build documents with the functions below and never add fields.

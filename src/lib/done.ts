@@ -1,6 +1,6 @@
 import type { HomeTask, ServiceInput } from './model';
-import { nextDueAfterDone } from './schedule';
-import { daysBetween, type Ymd } from './ymd';
+import { nextDueAfterDone } from '@huishouden/pwa-kit/schedule';
+import { daysBetween, type Ymd } from '@huishouden/pwa-kit/time';
 
 /** What marking a job done writes: the job's new due date and last-done day, and a history entry. */
 export function markDone(task: HomeTask, doneOn: Ymd): { due: Ymd; lastDone: Ymd; entry: ServiceInput } {

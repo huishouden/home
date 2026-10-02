@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { byExpiry, warrantyState, warrantyText } from './warranty';
-import { addDays } from './ymd';
+import { addDays } from '@huishouden/pwa-kit/time';
 
 const today = '2031-10-16';
 const at = (d: number) => addDays(today, d);

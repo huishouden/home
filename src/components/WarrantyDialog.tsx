@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { LIMITS, httpsUrl, type Warranty, type WarrantyInput } from '../lib/model';
-import { addMonths, isYmd, type Ymd } from '../lib/ymd';
+import { addMonths, isYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { ContactSelect, DeleteButton } from './bits';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from './ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 const LENGTHS = [1, 2, 3, 5, 10];
 

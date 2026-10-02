@@ -1,10 +1,10 @@
 import { BookOpen, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 import type { Warranty } from '../lib/model';
 import { byExpiry, warrantyState, warrantyText } from '../lib/warranty';
-import { formatShort, type Ymd } from '../lib/ymd';
+import { shortDate, type Ymd } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
 import { WhoLine } from '../components/bits';
-import { cardClass, iconButton, linkClass, primaryButton } from '../components/ui';
+import { cardClass, iconButton, linkClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** Appliances and systems with their warranty end, ending soonest first, and the receipt and manual one tap away. */
 export function Warranties({ store, today, onAdd, onEdit, notify }: {
@@ -56,7 +56,7 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
               </div>
               <p className={`mt-2 text-lg ${tone}`}>{warrantyText(w.warrantyEnd, today)}</p>
               <p className="text-base text-stone-600">
-                {[w.purchaseDate && `Bought ${formatShort(w.purchaseDate)}`, w.warrantyEnd && `warranty to ${formatShort(w.warrantyEnd)}`].filter(Boolean).join(', ') || 'No dates yet'}
+                {[w.purchaseDate && `Bought ${shortDate(w.purchaseDate)}`, w.warrantyEnd && `warranty to ${shortDate(w.warrantyEnd)}`].filter(Boolean).join(', ') || 'No dates yet'}
               </p>
               {(w.receiptUrl || w.manualUrl) && (
                 <div className="mt-1 flex flex-wrap gap-x-5">

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { byDue, dueState, dueText, headline, lastDoneText, needsAttention, spanWords } from './upkeep';
-import { addDays } from './ymd';
+import { addDays } from '@huishouden/pwa-kit/time';
 
 const today = '2031-10-16';
 const at = (d: number) => addDays(today, d);

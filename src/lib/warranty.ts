@@ -1,5 +1,5 @@
 import { spanWords } from './upkeep';
-import { daysBetween, type Ymd } from './ymd';
+import { daysBetween, type Ymd } from '@huishouden/pwa-kit/time';
 
 /** Warranties ending within this many days are highlighted. */
 export const EXPIRING_DAYS = 90;

@@ -3,7 +3,7 @@ import { cleanContact } from '@huishouden/pwa-kit/contacts';
 import { DEMO_MEMBERS, demoData, type HomeData } from '../lib/demo';
 import { doneFromEntry, markDone } from '../lib/done';
 import { serviceDoc, taskDoc, warrantyDoc, type ServiceEntry } from '../lib/model';
-import { toYmd } from '../lib/ymd';
+import { toYmd } from '@huishouden/pwa-kit/time';
 import type { HomeActions, HomeStore } from './types';
 
 /**
