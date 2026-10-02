@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { CalendarArrowDown, ExternalLink, Pencil, Plus } from 'lucide-react';
 import type { ServiceEntry } from '../lib/model';
-import { HOME_CALENDAR_QUERIES, fromCalendar } from '../lib/calendarImport';
+import { HOME_CALENDAR_QUERIES } from '../lib/calendarImport';
+import type { CalendarMatch } from '@huishouden/pwa-kit/calendar';
 import { formatCents } from '@huishouden/pwa-kit/money';
 import { daysBetween, longDate, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
@@ -11,17 +12,18 @@ import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishoud
 import { cardClass, iconButton, linkClass, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** The service history: booked visits ahead, then everything done, newest first, with what it cost. */
-export function History({ store, today, calendarAvailable, onAdd, onEdit, notify }: {
+export function History({ store, today, calendarAvailable, onAdd, onEdit, onImport }: {
   store: HomeStore;
   today: Ymd;
   calendarAvailable: boolean;
   onAdd: () => void;
   onEdit: (e: ServiceEntry) => void;
-  notify: (message: string, undo?: () => void) => void;
+  /** Adds calendar events to the history as visits, with a toast. */
+  onImport: (list: CalendarMatch[]) => void;
 }) {
   const [importing, setImporting] = useState(false);
   const scan = useCalendarSearch(auth, 'Home');
-  const { log, tasks } = store.data;
+  const { log } = store.data;
   const booked = log.filter((e) => daysBetween(today, e.date) > 0).sort((a, b) => daysBetween(b.date, a.date));
   const done = log.filter((e) => daysBetween(today, e.date) <= 0).sort((a, b) => daysBetween(a.date, b.date) || b.createdAt - a.createdAt);
   const years = [...new Set(done.map((e) => ymdParts(e.date)!.y))].sort((a, b) => b - a);
@@ -98,10 +100,7 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, notify
           allImported="Every house visit in your calendar is already in Home."
           records={log}
           onRetry={runScan}
-          onAdd={(list) => {
-            for (const m of list) store.actions.saveEntry(null, fromCalendar(m, tasks));
-            notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} visits`);
-          }}
+          onAdd={onImport}
           onClose={() => {
             setImporting(false);
             scan.reset();
