@@ -10,7 +10,8 @@ import type { HomeStore } from '../data/types';
 import { CategoryTile, DateTile, WhoLine } from '../components/bits';
 import { cardClass, ghostButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
-export type TabId = 'overview' | 'upkeep' | 'history' | 'warranties' | 'contacts';
+export type { TabId } from '../lib/tabs';
+import type { TabId } from '../lib/tabs';
 
 interface Props {
   store: HomeStore;

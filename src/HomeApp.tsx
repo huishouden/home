@@ -13,6 +13,7 @@ import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
 import { APP, ROLES } from './lib/contacts';
+import { tabFromHash } from './lib/tabs';
 import { Overview, type TabId } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
 import { History } from './screens/History';
@@ -46,7 +47,8 @@ type Editing<T> = { item: T | null; initial?: Partial<ServiceInput> } | null;
 export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner }: Props) {
   const { now } = useClock();
   const today = toYmd(now);
-  const [tab, setTab] = useState<TabId>('overview');
+  // Agenda links open a screen: #upkeep, #history, #warranties.
+  const [tab, setTab] = useState<TabId>(() => tabFromHash(window.location.hash));
   const [task, setTask] = useState<Editing<HomeTask>>(null);
   const [entry, setEntry] = useState<Editing<ServiceEntry>>(null);
   const [warranty, setWarranty] = useState<Editing<Warranty>>(null);
@@ -56,6 +58,11 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
 
   useEffect(() => {
     document.title = 'Huishouden Home';
+    const follow = () => {
+      if (window.location.hash) setTab(tabFromHash(window.location.hash));
+    };
+    window.addEventListener('hashchange', follow);
+    return () => window.removeEventListener('hashchange', follow);
   }, []);
 
   const markDone = (t: HomeTask) => {
