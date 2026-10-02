@@ -1,0 +1,20 @@
+[
+  {
+    "osm_type": "node",
+    "osm_id": 1000101,
+    "lat": "40.0001",
+    "lon": "-75.0001",
+    "name": "Example Electric",
+    "display_name": "Example Electric, 9 Sample Avenue, Springfield, 00000, United States",
+    "extratags": { "phone": "+1 555 010 0181", "website": "electric.example.com" }
+  },
+  {
+    "osm_type": "way",
+    "osm_id": 1000102,
+    "lat": "40.0002",
+    "lon": "-75.0002",
+    "name": "Example Pool Service",
+    "display_name": "Example Pool Service, 5 Demo Lane, Springfield, 00000, United States",
+    "extratags": {}
+  }
+]

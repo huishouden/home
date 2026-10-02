@@ -1,0 +1,34 @@
+{
+  "matches": [
+    {
+      "id": "evt-pest",
+      "title": "Quarterly pest treatment",
+      "start": 1950170400000,
+      "allDay": false,
+      "location": "Home",
+      "description": "<p>Inside and outside.</p><p>Leave the side gate open &amp; the dog in.</p>",
+      "link": "https://calendar.example.com/event?eid=evt-pest",
+      "calendarName": "Family"
+    },
+    {
+      "id": "evt-gutter",
+      "title": "Gutter cleaning",
+      "start": 1949565600000,
+      "allDay": true,
+      "location": "",
+      "description": "",
+      "link": "https://calendar.example.com/event?eid=evt-gutter",
+      "calendarName": "Sam"
+    },
+    {
+      "id": "evt-inspection",
+      "title": "Home inspection",
+      "start": 1951380000000,
+      "allDay": false,
+      "location": "",
+      "description": "Line one\nLine two",
+      "link": "https://calendar.example.com/event?eid=evt-inspection",
+      "calendarName": "Family"
+    }
+  ]
+}
