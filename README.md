@@ -1,10 +1,6 @@
 # Huishouden Home
 
-A wall-tablet app for keeping the house running. It shows what upkeep is overdue or due soon
-("Overdue: gutter cleaning", "Change HVAC filter due in 4 days") with a one-tap Done that rolls the
-schedule forward and records the visit, the service history with who did what and what it cost,
-warranties and manuals with how long each is still covered, and the service providers, each one tap
-from a call or a map.
+Keeping the house in good shape, together, from the living-room tablet or anyone's phone.
 
 Live at https://huishouden-home.web.app, also linked from the [Huishouden portal](https://huishouden-piekstra.web.app).
 Installable on the tablet, phones and laptops, and works offline (changes sync when the connection is back).
