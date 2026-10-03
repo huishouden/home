@@ -161,6 +161,8 @@ test('a landlord imported from a contact card is saved for the household', async
 });
 
 test('a job due today is on the portal’s To-do list, and Done there moves it on in Home', async ({ page }) => {
+  // Home, the portal, and Home again, with time for the to-do to be published: longer than one screen's test.
+  test.setTimeout(150_000);
   const title = `Descale the kettle ${Date.now().toString(36)}`;
   await signInTestUser(page, { email: 'test-a@example.com' });
   await page.getByRole('button', { name: 'Upkeep', exact: true }).click({ timeout: 20_000 });
