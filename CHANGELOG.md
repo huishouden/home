@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/huishouden/home/compare/v1.5.0...v1.6.0) (2026-10-03)
+
+
+### Features
+
+* **contacts:** add a provider or landlord from your own contacts; contact cards in the Share menu ([#24](https://github.com/huishouden/home/issues/24)) ([d8d7cda](https://github.com/huishouden/home/commit/d8d7cda1e96d2f0bcf8f53318de52f4540248dca))
+
 ## [1.5.0](https://github.com/huishouden/home/compare/v1.4.0...v1.5.0) (2026-10-03)
 
 
