@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { stubCalendar } from '@huishouden/pwa-kit/e2e';
-import { calendarEvents, repeatingEvents } from './fixtures/calendar';
+import { calendarEvents, reminderEvents, repeatingEvents } from './fixtures/calendar';
 
 // The sample house (signed out, nothing saved), on Thursday 16 October 2031 at 10:30: garbage went
 // out last night, the lawn service comes tomorrow at 9 and the side gate needs unlocking tonight.
@@ -116,7 +116,7 @@ test('a repeating garbage day in the calendar is offered as one regular event', 
   await stubCalendar(page, { events: [...repeatingEvents] });
   await page.goto('./');
   const card = page.getByRole('region', { name: 'Regular events in your calendar' });
-  await expect(card).toContainText('Looks regular: Trash day · Every Thursday at 7 AM');
+  await expect(card).toContainText('Looks regular: Trash day · Every Tuesday at 7 AM');
   // The one-off visit is still offered as a visit; the pickups are not.
   const visits = page.getByRole('region', { name: 'New in your calendar' });
   await expect(visits).toContainText('Lawn aeration');
@@ -127,12 +127,37 @@ test('a repeating garbage day in the calendar is offered as one regular event', 
   await expect(dialog.getByLabel('What', { exact: true })).toHaveValue('Trash day');
   await expect(dialog.getByLabel('Kind')).toHaveValue('trash');
   await expect(dialog.getByLabel('At (optional)')).toHaveValue('07:00');
-  await expect(dialog).toContainText('Every Thursday');
+  await expect(dialog).toContainText('Every Tuesday');
   await dialog.getByRole('button', { name: 'Save' }).click();
 
   await expect(card).toHaveCount(0);
   await regularTab(page);
-  await expect(page.getByRole('listitem', { name: 'Trash day' })).toContainText('Every Thursday at 7 AM');
+  await expect(page.getByRole('listitem', { name: 'Trash day' })).toContainText('Every Tuesday at 7 AM');
+});
+
+test('reminders before pickups the house has are not new events; one becomes the thing to do before', async ({ page }) => {
+  await stubCalendar(page, { events: [...reminderEvents, ...repeatingEvents] });
+  await page.goto('./');
+  const card = page.getByRole('region', { name: 'Regular events in your calendar' });
+  await expect(card).toContainText('Looks regular: Recycling out for Thursday pickup · Every other Wednesday at 8 PM · before Recycling pickup');
+  // Garbage already has its thing to do before: its reminder is neither offered nor a visit.
+  await expect(card).not.toContainText('Garbage out');
+  await expect(page.getByRole('region', { name: 'New in your calendar' })).not.toContainText('Garbage out');
+  await card.getByRole('button', { name: '+1 more' }).click();
+  await expect(card.getByRole('list', { name: 'More regular events in your calendar' })).toContainText('Trash day');
+
+  await card.getByRole('button', { name: 'Use Recycling out for Thursday pickup as prep for Recycling pickup' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit the schedule' });
+  await expect(dialog.getByLabel('What', { exact: true })).toHaveValue('Recycling pickup');
+  await expect(dialog.getByLabel('What to do')).toHaveValue('Recycling out for pickup');
+  await expect(dialog).toContainText('The evening before at 8 PM.');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.getByText('Recycling out for pickup before Recycling pickup')).toBeVisible();
+  await expect(card).not.toContainText('Recycling out');
+  await expect(card).toContainText('Looks regular: Trash day');
+  await regularTab(page);
+  await expect(page.getByRole('listitem', { name: 'Recycling pickup' })).toContainText('Recycling out for pickup: the evening before at 8 PM');
 });
 
 test('Import from calendar offers a repeating pickup as a regular event', async ({ page }) => {
@@ -141,7 +166,7 @@ test('Import from calendar offers a repeating pickup as a regular event', async 
   await page.getByRole('button', { name: 'History', exact: true }).first().click();
   await page.getByRole('button', { name: 'Import from calendar' }).click();
   const dialog = page.getByRole('dialog', { name: 'Import from calendar' });
-  await expect(dialog.getByRole('list', { name: 'Regular events' })).toContainText('Looks regular: Every Thursday at 7 AM');
+  await expect(dialog.getByRole('list', { name: 'Regular events' })).toContainText('Looks regular: Every Tuesday at 7 AM');
   await expect(dialog.getByRole('list', { name: 'Calendar events' })).not.toContainText('Trash day');
   await dialog.getByRole('button', { name: 'Make Trash day a regular event' }).click();
   await expect(page.getByRole('dialog', { name: 'New regular event' }).getByLabel('What', { exact: true })).toHaveValue('Trash day');

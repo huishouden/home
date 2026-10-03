@@ -23,7 +23,7 @@ const PREP_TITLES: Partial<Record<EventKind, string>> = {
  */
 export function EventDialog({ event, initial, today, contacts, onSave, onDelete, onClose }: {
   event: HomeEvent | null;
-  /** For a new one: what it starts with (from a calendar series, say). */
+  /** What it starts with: a new one from a calendar series, or an existing one's thing to do before from a calendar reminder. */
   initial?: Partial<EventInput>;
   today: Ymd;
   contacts: Contact[];
@@ -31,7 +31,7 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
   onDelete?: () => void;
   onClose: () => void;
 }) {
-  const start = event ?? initial;
+  const start = event ? { ...event, ...initial } : initial;
   const [title, setTitle] = useState(start?.title ?? '');
   const [kind, setKind] = useState<EventKind>(start?.kind ?? 'other');
   const [kindTouched, setKindTouched] = useState(!!event || !!initial?.kind);

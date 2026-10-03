@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { allDayStart } from '@huishouden/pwa-kit/agenda';
 import { atTime } from '@huishouden/pwa-kit/time';
 import {
-  EVENT_PRESETS, eventAgenda, eventWhen, fromSeries, guessEventKind, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepTasks, withOccurrenceChange,
+  EVENT_PRESETS, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepTasks, withOccurrenceChange,
 } from './events';
 import { eventDoc, type HomeEvent, type PrepTick } from './model';
 
@@ -160,10 +160,11 @@ describe('the household agenda and reminders', () => {
 });
 
 describe('calendar suggestions', () => {
-  const ev = (id: string, title: string, day: number, series?: string) => ({
+  // Sundays 19 and 26 October 2031, Mondays 20 and 27, Wednesdays 22 and 29, Thursdays 16, 23 and 30.
+  const ev = (id: string, title: string, day: number, series?: string, time = '07:00') => ({
     id,
     title,
-    start: atTime(`2031-10-${String(day).padStart(2, '0')}`, '07:00'),
+    start: atTime(`2031-10-${String(day).padStart(2, '0')}`, time),
     allDay: false,
     location: '',
     description: '',
@@ -171,14 +172,57 @@ describe('calendar suggestions', () => {
     calendarName: 'Family',
     ...(series ? { recurringEventId: series } : {}),
   });
+  const weekly = (key: string, title: string, days: number[], time = '07:00') => days.map((d, i) => ev(`${key}${i}`, title, d, key, time));
+  // Garbage on Mondays and Thursdays, entered by hand after the calendar reminders began.
+  const garbage: HomeEvent = { ...trash, rule: { freq: 'week', every: 1, start: '2031-11-03', days: [1, 4] } };
+  const recycling: HomeEvent = { id: 'e3', title: 'Recycling pickup', kind: 'recycling', rule: { freq: 'week', every: 2, start: '2031-10-16' }, createdAt: 1, by: 'sam@example.com' };
+  const mondayOut = weekly('m', 'Garbage out for Monday Pickup', [19, 26], '20:00');
+  const thursdayOut = weekly('w', 'Garbage out for Thursday Pickup', [22, 29], '20:00');
 
   test('a repeating pickup is one offer; one-offs, other repeating events and known events are not', () => {
-    const { offers, visits } = splitRegular(
-      [ev('t1', 'Trash day', 16, 's'), ev('t2', 'Trash day', 23, 's'), ev('a', 'Lawn aeration', 24), ev('b1', 'Book club', 16, 'b'), ev('b2', 'Book club', 23, 'b'), ev('g', 'Garbage pickup', 23, 'g'), ev('g2', 'Garbage pickup', 30, 'g')],
-      [trash],
+    const { offers, prepOffers, visits } = splitRegular(
+      [...weekly('s', 'Trash day', [14, 21]), ev('a', 'Lawn aeration', 24), ev('b1', 'Book club', 16, 'b'), ev('b2', 'Book club', 23, 'b'), ev('g', 'Garbage pickup', 23, 'g'), ev('g2', 'Garbage pickup', 30, 'g')],
+      [{ ...trash, prep: undefined }],
     );
-    expect(offers.map((o) => [o.title, o.rule, o.time])).toEqual([['Trash day', { freq: 'week', every: 1, start: '2031-10-16' }, '07:00']]);
+    expect(offers.map((o) => [o.title, o.rule, o.time])).toEqual([['Trash day', { freq: 'week', every: 1, start: '2031-10-14' }, '07:00']]);
+    expect(prepOffers).toEqual([]);
     expect(visits.map((m) => m.id)).toEqual(['a', 'b1', 'b2']);
-    expect(fromSeries(offers[0])).toEqual({ title: 'Trash day', kind: 'trash', rule: { freq: 'week', every: 1, start: '2031-10-16' }, time: '07:00' });
+    expect(fromSeries(offers[0])).toEqual({ title: 'Trash day', kind: 'trash', rule: { freq: 'week', every: 1, start: '2031-10-14' }, time: '07:00' });
+  });
+
+  test('a series on the pickup days of an event the household has is not offered, nor its occurrences as visits', () => {
+    const { offers, prepOffers, visits } = splitRegular([...weekly('t', 'Trash day', [16, 20, 23, 27]), ...weekly('r', 'Recycling', [16, 30])], [garbage, recycling]);
+    expect([offers, prepOffers, visits]).toEqual([[], [], []]);
+  });
+
+  test('the evening-before reminders for Monday and Thursday pickups are the thing to do before, not new events', () => {
+    const { prep: _, ...bare } = garbage;
+    const { offers, prepOffers, visits } = splitRegular([...mondayOut, ...thursdayOut], [recycling, bare]);
+    expect(offers).toEqual([]);
+    expect(visits).toEqual([]);
+    // One offer per event: the second reminder goes once the first is used or dismissed.
+    expect(prepOffers.map((o) => [o.series.title, o.event.id, o.prep])).toEqual([
+      ['Garbage out for Monday Pickup', 'e1', { title: 'Garbage out for pickup', offset: { daysBefore: 1, time: '20:00' }, remind: true }],
+    ]);
+    expect(splitRegular(thursdayOut, [bare]).prepOffers.map((o) => [o.series.title, o.prep.offset])).toEqual([['Garbage out for Thursday Pickup', { daysBefore: 1, time: '20:00' }]]);
+  });
+
+  test('with a thing to do before already, the reminders are just left out', () => {
+    expect(splitRegular([...mondayOut, ...thursdayOut], [garbage])).toEqual({ offers: [], prepOffers: [], visits: [] });
+  });
+
+  test('a series titled like an event the household has is left out, whatever its days', () => {
+    expect(splitRegular(weekly('x', 'The garbage pickup', [14, 21]), [garbage])).toEqual({ offers: [], prepOffers: [], visits: [] });
+  });
+
+  test('a new series is still offered', () => {
+    const { offers, prepOffers } = splitRegular([...weekly('y', 'Yard waste pickup', [21, 28]), ...weekly('n', 'Recycling out', [19, 26], '20:00')], [garbage]);
+    expect(offers.map((o) => o.title)).toEqual(['Recycling out', 'Yard waste pickup']);
+    expect(prepOffers).toEqual([]);
+  });
+
+  test('a reminder title for one weekday becomes one for every pickup', () => {
+    expect(prepTitleFrom('Garbage out for Monday Pickup')).toBe('Garbage out for pickup');
+    expect(prepTitleFrom('Put the bins out')).toBe('Put the bins out');
   });
 });

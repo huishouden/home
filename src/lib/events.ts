@@ -1,5 +1,5 @@
 import type { AgendaInput } from '@huishouden/pwa-kit/agenda';
-import { recurringSeries, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
+import { looksLikePrep, recurringSeries, seriesCover, similarTitles, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { ReminderInput } from '@huishouden/pwa-kit/reminders';
@@ -73,16 +73,52 @@ const sameTitle = (a: string, b: string) => a.trim().toLowerCase().replace(/\s+/
 /** Whether the household already has a regular event by this name (so its calendar occurrences aren't offered again). */
 export const hasEventNamed = (events: Pick<HomeEvent, 'title'>[], title: string) => events.some((e) => sameTitle(e.title, title));
 
+/** A calendar series that is the reminder before an event the household has: offered as its thing to do before. */
+export interface PrepOffer {
+  series: CalendarSeries;
+  event: HomeEvent;
+  prep: EventPrep;
+}
+
+/** Whether an event is about what a calendar series is about: the same kind (garbage, recycling, lawn...). */
+const relatedTo = (s: CalendarSeries, e: Pick<HomeEvent, 'title' | 'kind'>) => {
+  const kind = guessEventKind(s.title);
+  return !!kind && (e.kind === kind || guessEventKind(e.title) === kind);
+};
+
+/** "Garbage out for Monday Pickup" → "Garbage out for pickup": the reminder for one weekday becomes the one for every pickup. */
+export function prepTitleFrom(title: string): string {
+  const t = title.trim().replace(/\s+(for|before)\s+(?:the\s+)?(?:sun|mon|tues|wednes|thurs|fri|satur)day(?:'s)?\b/i, ' $1').replace(/\s+/g, ' ');
+  if (t === title.trim()) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
 /**
  * Calendar events split into regular-event offers (garbage, recycling and lawn events that repeat:
- * one offer per series) and the rest, offered as visits. Occurrences of an event the household
- * already has are neither.
+ * one offer per series), reminders offered as an event's thing to do before, and the rest, offered
+ * as visits. A series an event already covers is neither offered nor a visit: one with a title
+ * like the event's, one on the event's days and rhythm, or one where its thing to do before goes
+ * ("Garbage out for Monday pickup" every Sunday evening, before a Monday pickup). That last one is
+ * offered as the thing to do before when the event has none and it reads as a reminder (one offer
+ * per event). Occurrences of an event the household already has by name are neither.
  */
-export function splitRegular(matches: CalendarMatch[], events: Pick<HomeEvent, 'title'>[]): { offers: CalendarSeries[]; visits: CalendarMatch[] } {
+export function splitRegular(matches: CalendarMatch[], events: HomeEvent[]): { offers: CalendarSeries[]; prepOffers: PrepOffer[]; visits: CalendarMatch[] } {
   const fresh = matches.filter((m) => !hasEventNamed(events, m.title));
-  const offers = recurringSeries(fresh).series.filter((s) => REGULAR_WORDS.test(s.title));
-  const offered = new Set(offers.flatMap((s) => s.matches.map((m) => m.id)));
-  return { offers, visits: fresh.filter((m) => !offered.has(m.id)) };
+  const offers: CalendarSeries[] = [];
+  const prepOffers: PrepOffer[] = [];
+  const taken = new Set<string>();
+  for (const s of recurringSeries(fresh).series) {
+    const known = events.some((e) => similarTitles(e.title, s.title));
+    const cover = known ? null : seriesCover(s, events, { related: relatedTo });
+    if (!known && !cover) {
+      if (REGULAR_WORDS.test(s.title)) offers.push(s);
+      else continue;
+    } else if (cover?.as === 'prep' && cover.offset && !cover.event.prep && looksLikePrep(s) && !prepOffers.some((o) => o.event.id === cover.event.id)) {
+      prepOffers.push({ series: s, event: cover.event, prep: { title: prepTitleFrom(s.title), offset: cover.offset, remind: true } });
+    }
+    for (const m of s.matches) taken.add(m.id);
+  }
+  return { offers, prepOffers, visits: fresh.filter((m) => !taken.has(m.id)) };
 }
 
 /** A new regular event from a calendar series: its title, kind, schedule and time. */
