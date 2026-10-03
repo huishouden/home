@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { allDayStart } from '@huishouden/pwa-kit/agenda';
 import { applyOps as applyKitOps } from '@huishouden/pwa-kit/store';
 import { TODO_COLLECTIONS, resolveOps, todoDoc, todoOpsAllowed, type TodoInput } from '@huishouden/pwa-kit/todos';
-import { HOUR, addDays, atTime } from '@huishouden/pwa-kit/time';
+import { HOUR, addDays, atTime, daysBetween } from '@huishouden/pwa-kit/time';
 import { COLLECTIONS, applyOps, createActions, type DataKey, type Op } from '../data/actions';
 import { AGENDA_APP } from './agenda';
 import { DEMO_NOW, DEMO_TODAY, demoData, type HomeData } from './demo';
@@ -120,15 +120,31 @@ describe('what Home publishes', () => {
 
 describe('next due date', () => {
   test('after-done: from the day it is done, as a placeholder', () => {
-    expect(nextDueValue({ kind: 'after-done', every: 2, unit: 'week' }, '2031-10-01', DEMO_NOW)).toBe('$today+2w');
-    expect(nextDueValue({ kind: 'after-done', every: 10, unit: 'day' }, '2031-10-01', DEMO_NOW)).toBe('$today+10d');
-    expect(nextDueValue({ kind: 'after-done', every: 1, unit: 'year' }, '2031-10-01', DEMO_NOW)).toBe('$today+1y');
+    expect(nextDueValue({ kind: 'after-done', every: 2, unit: 'week' }, '2031-10-01')).toBe('$today+2w');
+    expect(nextDueValue({ kind: 'after-done', every: 10, unit: 'day' }, '2031-10-01')).toBe('$today+10d');
+    expect(nextDueValue({ kind: 'after-done', every: 1, unit: 'year' }, '2031-10-01')).toBe('$today+1y');
   });
 
-  test('set dates: the next one after its due date, or after today when more than one has passed', () => {
+  test('set dates: a placeholder for the next one after its due date and the day it is done', () => {
     const monthly = { kind: 'fixed', every: 1, unit: 'month', anchor: '2031-01-01' } as const;
-    expect(nextDueValue(monthly, '2031-11-01', DEMO_NOW)).toBe('2031-12-01');
-    expect(nextDueValue(monthly, '2031-08-01', DEMO_NOW)).toBe('2031-11-01');
+    expect(nextDueValue(monthly, '2031-08-01')).toEqual({ $nextDue: { schedule: monthly, due: '2031-08-01' } });
+    const tapped = (due: string, on: string) => resolveOps([{ col: 'homeTasks', id: 'j', data: { due: nextDueValue(monthly, due) } }], { now: atTime(on, '10:00'), me })[0].data;
+    expect(tapped('2031-11-01', '2031-10-16')).toEqual({ due: '2031-12-01' });
+    expect(tapped('2031-08-01', '2031-10-16')).toEqual({ due: '2031-11-01' });
+  });
+
+  test('set dates: published one date overdue, tapped three dates overdue, next due is after the tap', () => {
+    const d = demoData();
+    const monthly = { kind: 'fixed', every: 1, unit: 'month', anchor: '2031-01-01' } as const;
+    const task: HomeTask = { ...d.tasks.find((t) => t.id === 'demo-task-gutters')!, schedule: monthly, due: '2031-07-01' };
+    const data = { ...d, tasks: d.tasks.map((t) => (t.id === task.id ? task : t)) };
+    // Published on 2 July; Done tapped on 16 October, after the August, September and October dates.
+    const ops = jobTodo(task, data.contacts).done!.ops;
+    const at = atTime('2031-10-16', '10:00');
+    const done = run(data, ops, at).tasks.find((t) => t.id === task.id)!;
+    expect(done.due).toBe('2031-11-01');
+    expect(done.lastDone).toBe('2031-10-16');
+    expect(daysBetween('2031-10-16', done.due)).toBeGreaterThan(0);
   });
 });
 
@@ -139,7 +155,7 @@ describe('the portal running an action writes what Home does', () => {
     for (const id of ['demo-task-gutters', 'demo-task-filter', 'demo-task-pest']) {
       const d = demoData();
       const task = d.tasks.find((t) => t.id === id)!;
-      const portal = run(d, jobTodo(task, d.contacts, DEMO_NOW).done!.ops);
+      const portal = run(d, jobTodo(task, d.contacts).done!.ops);
       const app = home(demoData());
       const { entryId } = app.actions.markDone(task, DEMO_TODAY);
       expect(strip(portal.tasks.find((t) => t.id === id))).toEqual(strip(app.data.tasks.find((t) => t.id === id)));
@@ -154,7 +170,7 @@ describe('the portal running an action writes what Home does', () => {
   test('Pause on a job: paused as in Home, kept with its dates, and no longer published', () => {
     const d = demoData();
     const task = d.tasks.find((t) => t.id === 'demo-task-gutters')!;
-    const portal = run(d, jobTodo(task, d.contacts, DEMO_NOW).cancel!.ops);
+    const portal = run(d, jobTodo(task, d.contacts).cancel!.ops);
     const app = home(demoData());
     app.actions.pauseTask(task);
     expect(strip(portal.tasks.find((t) => t.id === task.id))).toEqual(strip(app.data.tasks.find((t) => t.id === task.id)));
