@@ -47,6 +47,12 @@ A job repeats in one of two ways:
   insurance renewal. Marking it done moves to the next date after both the due date and the day it
   was done, so doing an overdue job once covers the missed dates.
 
+A new job asks "When was it last done?" and is never assumed done. "Not done yet, it's due now" (the
+default) makes a counted job due today, so it shows as needing doing; a job on set dates goes on its
+next date, or on the date that passed with "It's overdue". "Today" or a past day counts from that day,
+which can make it overdue straight away. Next due follows the answer as it changes and can be set by
+hand. Editing a job changes its last-done day and next due date the same way.
+
 Months clamp to the month's last day (January 31 plus a month is February 28) and keep the 31st for
 later months. Everything is in local calendar days. Adding a past history entry for a job also marks
 the job done on that day when it is the latest time it was done; a future entry is a booked visit.
