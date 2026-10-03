@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "person": {
+        "resourceName": "people/c1001",
+        "names": [{ "metadata": { "primary": true }, "displayName": "Jordan Example" }],
+        "phoneNumbers": [{ "metadata": { "primary": true }, "value": "(555) 010-0142", "type": "mobile", "formattedType": "Mobile" }],
+        "emailAddresses": [{ "metadata": { "primary": true }, "value": "jordan@example.com" }],
+        "addresses": [{ "metadata": { "primary": true }, "formattedValue": "12 Example Street\nSpringfield, IL 62704" }],
+        "organizations": [{ "metadata": { "primary": true }, "name": "Example Property Management" }]
+      }
+    }
+  ]
+}

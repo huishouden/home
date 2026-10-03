@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-import type { Contact } from '@huishouden/pwa-kit/contacts';
+import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
 import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
 import { CalendarSync } from 'lucide-react';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
@@ -68,7 +68,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const [task, setTask] = useState<Editing<HomeTask>>(null);
   const [entry, setEntry] = useState<Editing<ServiceEntry>>(null);
   const [warranty, setWarranty] = useState<Editing<Warranty>>(null);
-  const [contact, setContact] = useState<Editing<Contact>>(null);
+  const [contact, setContact] = useState<{ item: Contact | null; shared?: ParsedContact[] } | null>(null);
   const [regular, setRegular] = useState<{ item: HomeEvent | null; initial?: Partial<EventInput> } | null>(null);
   const [occurrence, setOccurrence] = useState<{ event: HomeEvent; occurrence: Occurrence } | null>(null);
   const calendar = calendarAvailable(user);
@@ -102,6 +102,16 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     for (const m of list) actions.saveEntry(null, fromCalendar(m, data.tasks, data.events));
     notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} visits`);
   };
+
+  // Opened from the Share menu with a contact card (Contacts → Share → Home): a new contact, filled in.
+  useEffect(() => {
+    void readSharedContact().then((cards) => {
+      if (!cards) return;
+      clearSharedContact();
+      setTab('contacts');
+      setContact({ item: null, shared: cards });
+    });
+  }, []);
 
   useEffect(() => {
     document.title = 'Huishouden Home';
@@ -308,6 +318,8 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           app={APP}
           roles={ROLES}
           namePlaceholder="Example Lawn Care"
+          auth={auth}
+          sharedContacts={contact.shared}
           canMarkPrivate={!role || role.can('see-private')}
           onClose={() => setContact(null)}
           onSave={(input) => {

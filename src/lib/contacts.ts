@@ -4,4 +4,4 @@
 export const APP = 'home';
 
 /** Roles offered as one-tap choices, in the order the Contacts tab shows them. */
-export const ROLES = ['HVAC', 'Pest control', 'Lawn service', 'Plumber', 'Electrician', 'Roofer', 'Pool service', 'Handyman', 'Insurance', 'HOA'] as const;
+export const ROLES = ['HVAC', 'Pest control', 'Lawn service', 'Plumber', 'Electrician', 'Roofer', 'Pool service', 'Handyman', 'Insurance', 'HOA', 'Landlord'] as const;
