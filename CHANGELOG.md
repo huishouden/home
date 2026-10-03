@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/huishouden/home/compare/v1.9.1...v1.10.0) (2026-10-03)
+
+
+### Features
+
+* dark mode that follows the suite's theme ([#38](https://github.com/huishouden/home/issues/38)) ([d932a55](https://github.com/huishouden/home/commit/d932a555ecb436fe40518bebef5a9f331d978288))
+
 ## [1.9.1](https://github.com/huishouden/home/compare/v1.9.0...v1.9.1) (2026-10-03)
 
 
