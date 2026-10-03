@@ -152,7 +152,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   };
 
   let content: ReactNode;
-  if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the house</p>;
+  if (!store.ready) content = <p className="p-2 text-lg text-muted">Loading the house</p>;
   else if (tab === 'upkeep')
     content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((t: HomeTask) => setTask({ item: t }))} onDone={markDone} onResume={resumeTask} />;
   else if (tab === 'history')
@@ -201,7 +201,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-cream font-sans text-stone-800 antialiased lg:h-dvh lg:overflow-hidden">
+    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased lg:h-dvh lg:overflow-hidden">
       <Header tabs={TABS} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
@@ -215,7 +215,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
               lead="Looks regular"
               label="Regular events in your calendar"
               moreLabel="More regular events in your calendar"
-              icon={<CalendarSync size={20} className="shrink-0 text-forest-700" aria-hidden="true" />}
+              icon={<CalendarSync size={20} className="shrink-0 text-link" aria-hidden="true" />}
               addAs={({ series: s, prep: p }) => (p ? { label: 'Use as prep', ariaLabel: `Use ${s.title} as prep for ${p.event.title}` } : null)}
               onAdd={({ series: s, prep: p }) => setRegular(p ? { item: p.event, initial: { prep: p.prep } } : { item: null, initial: fromSeries(s) })}
               onDismiss={(o) => o.series.matches.forEach(suggested.dismiss)}

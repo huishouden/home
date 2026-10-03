@@ -40,7 +40,7 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
   return (
     <Dialog title={event.title} onClose={onClose}>
       <div className="space-y-4">
-        <div className="text-lg text-stone-800">
+        <div className="text-lg text-ink">
           {o.skipped ? (
             <p className="font-semibold">Skipped this time</p>
           ) : (
@@ -49,15 +49,15 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
               {o.time ? ` at ${clockWords(o.time)}` : ''}
             </p>
           )}
-          {o.moved && <p className="text-base text-stone-600">Moved from {fromWords(o.original, today)}</p>}
-          {o.note && <p className="text-base text-stone-600">{o.note}</p>}
+          {o.moved && <p className="text-base text-muted">Moved from {fromWords(o.original, today)}</p>}
+          {o.note && <p className="text-base text-muted">{o.note}</p>}
         </div>
 
         {!canChange ? (
           <RoleNote action="edit-others" />
         ) : moving ? (
           <form
-            className="space-y-3 rounded-2xl border border-stone-200 p-4"
+            className="space-y-3 rounded-2xl border border-line p-4"
             onSubmit={(e) => {
               e.preventDefault();
               if (moveOk) done({ moved: { date, ...(isHhmm(time) ? { time } : {}) }, ...(note.trim() ? { note: note.trim() } : {}) });

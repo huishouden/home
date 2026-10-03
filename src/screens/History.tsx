@@ -42,7 +42,7 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
     <div className="mx-auto max-w-4xl space-y-6 lg:h-full lg:overflow-y-auto">
       <div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h2 className="text-2xl font-semibold text-stone-800">History</h2>
+          <h2 className="text-2xl font-semibold text-ink">History</h2>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -79,7 +79,7 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
       )}
 
       {done.length === 0 && booked.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-stone-600`}>Nothing in the history yet. Marking an upkeep job done adds it here, or add a visit by hand.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>Nothing in the history yet. Marking an upkeep job done adds it here, or add a visit by hand.</p>
       )}
 
       {years.map((y) => {
@@ -89,8 +89,8 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
           <section key={y} aria-label={`Done in ${y}`}>
             <div className="mb-2 flex items-baseline justify-between gap-4">
               <h3 className={overline}>{y}</h3>
-              <p className="text-base text-stone-600">
-                Spent <span className="font-semibold text-stone-800 tabular-nums">{formatCents(total)}</span>
+              <p className="text-base text-muted">
+                Spent <span className="font-semibold text-ink tabular-nums">{formatCents(total)}</span>
               </p>
             </div>
             <ul className={cardClass}>
@@ -117,12 +117,12 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
           }}
         >
           {split && split.offers.length > 0 && (
-            <ul className="mt-4 divide-y divide-stone-200 rounded-2xl border border-forest-200 bg-forest-50" aria-label="Regular events">
+            <ul className="mt-4 divide-y divide-line rounded-2xl border border-forest-200 bg-tint dark:border-forest-600" aria-label="Regular events">
               {split.offers.map((o) => (
                 <li key={o.key} className="flex items-center gap-3 px-3 py-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-stone-800 [overflow-wrap:anywhere]">{o.title}</p>
-                    <p className="text-sm text-stone-600">
+                    <p className="font-medium text-ink [overflow-wrap:anywhere]">{o.title}</p>
+                    <p className="text-sm text-muted">
                       Looks regular: {describeRule(o.rule)}
                       {o.time ? ` at ${clockWords(o.time)}` : ''}
                     </p>
@@ -152,16 +152,16 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
 function Entry({ entry: e, today, store, strong, onEdit }: { entry: ServiceEntry; today: Ymd; store: HomeStore; strong?: boolean; onEdit: () => void }) {
   const contact = e.contactId ? store.data.contacts.find((c) => c.id === e.contactId) : undefined;
   return (
-    <li className="flex items-start gap-4 border-b border-stone-200 p-4 last:border-b-0 sm:gap-5 sm:p-5" aria-label={`${e.title}, ${longDate(e.date, today)}`}>
+    <li className="flex items-start gap-4 border-b border-line p-4 last:border-b-0 sm:gap-5 sm:p-5" aria-label={`${e.title}, ${longDate(e.date, today)}`}>
       <DateTile date={e.date} strong={strong} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-          <p className="text-xl font-semibold text-stone-800">{e.title}</p>
-          {e.costCents !== undefined && <p className="text-lg font-semibold text-stone-800 tabular-nums">{formatCents(e.costCents)}</p>}
+          <p className="text-xl font-semibold text-ink">{e.title}</p>
+          {e.costCents !== undefined && <p className="text-lg font-semibold text-ink tabular-nums">{formatCents(e.costCents)}</p>}
         </div>
-        <p className="text-base text-stone-600">{longDate(e.date, today)}</p>
+        <p className="text-base text-muted">{longDate(e.date, today)}</p>
         <WhoLine contact={contact} who={e.who} compact />
-        {e.notes && <p className="mt-0.5 text-base whitespace-pre-line text-stone-600">{e.notes}</p>}
+        {e.notes && <p className="mt-0.5 text-base whitespace-pre-line text-muted">{e.notes}</p>}
         {e.calendarLink && (
           <a className={linkClass} href={e.calendarLink} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={16} aria-hidden="true" /> Open in Calendar

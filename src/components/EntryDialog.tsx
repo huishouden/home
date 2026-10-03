@@ -115,7 +115,7 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
           </Field>
           <Field label="Cost (optional)" hint={costCents === null ? 'An amount like 95 or 95.50.' : undefined}>
             <span className="relative block">
-              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-stone-600" aria-hidden="true">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" aria-hidden="true">
                 $
               </span>
               <input className={`${inputClass} pl-7 tabular-nums`} inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />

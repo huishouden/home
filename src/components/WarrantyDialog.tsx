@@ -88,7 +88,7 @@ export function WarrantyDialog({ warranty, today, contacts, onSave, onDelete, on
         </div>
         {isYmd(purchaseDate) && (
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Warranty length">
-            <span className="text-sm text-stone-600">Covered for</span>
+            <span className="text-sm text-muted">Covered for</span>
             {LENGTHS.map((years) => {
               const end = addMonths(purchaseDate, 12 * years);
               return (

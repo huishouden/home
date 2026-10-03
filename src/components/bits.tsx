@@ -46,7 +46,7 @@ export function CategoryTile({ category, attention, size = 'md' }: { category: C
   const box = size === 'lg' ? 'h-14 w-14' : 'h-11 w-11';
   return (
     <span
-      className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-terracotta-light text-terracotta-dark' : 'bg-forest-50 text-forest-700'}`}
+      className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-attention-tint text-attention' : 'bg-tint text-link'}`}
       role="img"
       aria-label={CATEGORY_LABELS[category]}
     >
@@ -71,7 +71,7 @@ export function EventTile({ kind, attention, size = 'md' }: { kind: EventKind; a
   const box = size === 'lg' ? 'h-14 w-14' : 'h-11 w-11';
   return (
     <span
-      className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-terracotta-light text-terracotta-dark' : 'bg-forest-50 text-forest-700'}`}
+      className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-attention-tint text-attention' : 'bg-tint text-link'}`}
       role="img"
       aria-label={EVENT_KIND_LABELS[kind]}
     >
@@ -84,7 +84,7 @@ export function EventTile({ kind, attention, size = 'md' }: { kind: EventKind; a
 export function DateTile({ date, strong }: { date: Ymd; strong?: boolean }) {
   const p = ymdParts(date)!;
   return (
-    <div className={`flex w-16 shrink-0 flex-col items-center rounded-xl py-1.5 ${strong ? 'bg-forest-700 text-white' : 'bg-forest-50 text-forest-700'}`} aria-hidden="true">
+    <div className={`flex w-16 shrink-0 flex-col items-center rounded-xl py-1.5 ${strong ? 'bg-forest-700 text-white' : 'bg-tint text-link'}`} aria-hidden="true">
       <span className="text-sm font-medium">{MONTHS[p.m - 1].slice(0, 3)}</span>
       <span className="text-2xl leading-tight font-semibold tabular-nums">{p.d}</span>
     </div>
@@ -95,7 +95,7 @@ export function DateTile({ date, strong }: { date: Ymd; strong?: boolean }) {
 export function WhoLine({ contact, who, compact }: { contact?: Contact; who?: string; compact?: boolean }) {
   if (!contact && !who) return null;
   return (
-    <div className={`flex flex-wrap items-center gap-x-4 text-stone-600 ${compact ? 'text-sm' : 'text-base'}`}>
+    <div className={`flex flex-wrap items-center gap-x-4 text-muted ${compact ? 'text-sm' : 'text-base'}`}>
       <span className="flex min-h-11 items-center gap-1.5">
         <UserRound size={16} aria-hidden="true" /> {contact?.name ?? who}
       </span>

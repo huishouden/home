@@ -70,7 +70,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
           </button>
         </div>
         {prep.length > 0 && (
-          <ul className="mt-2 mb-3 border-b border-stone-200" aria-label="Before regular events">
+          <ul className="mt-2 mb-3 border-b border-line" aria-label="Before regular events">
             {prep.map((t) => (
               <PrepRow key={t.id} task={t} now={now} today={today} me={store.me} onToggle={() => onTogglePrep(t)} onSkip={() => onSkipPrep(t)} />
             ))}
@@ -78,8 +78,8 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         )}
         {!first ? (
           <div className="mt-2">
-            <p className="text-3xl font-semibold text-stone-800">Nothing scheduled yet</p>
-            <p className="mt-2 text-lg text-stone-600">Add the jobs that keep the house running: filters, pest control, gutters, renewals.</p>
+            <p className="text-3xl font-semibold text-ink">Nothing scheduled yet</p>
+            <p className="mt-2 text-lg text-muted">Add the jobs that keep the house running: filters, pest control, gutters, renewals.</p>
             <button type="button" className={`${primaryButton} mt-5`} onClick={onAddTask}>
               <Plus size={20} /> Add a job
             </button>
@@ -88,13 +88,13 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
           <>
             <Lead task={first} today={today} contact={contactOf(contacts, first.contactId)} onDone={() => onDone(first)} onEdit={() => onEditTask(first)} />
             {later.length > 0 && (
-              <ul className="mt-5 min-h-0 flex-1 overflow-y-auto border-t border-stone-200" aria-label="Also due">
+              <ul className="mt-5 min-h-0 flex-1 overflow-y-auto border-t border-line" aria-label="Also due">
                 {later.map((t) => (
                   <Row key={t.id} task={t} today={today} onDone={() => onDone(t)} onEdit={() => onEditTask(t)} />
                 ))}
               </ul>
             )}
-            {attention.length === 0 && <p className="mt-4 text-lg text-stone-600">Nothing else in the next two weeks.</p>}
+            {attention.length === 0 && <p className="mt-4 text-lg text-muted">Nothing else in the next two weeks.</p>}
           </>
         )}
       </section>
@@ -103,7 +103,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         {regular.length > 0 && (
           <section className={`${cardClass} shrink-0 px-6 py-4`} aria-label="Regular events">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-stone-800">Coming up</h2>
+              <h2 className="text-xl font-semibold text-ink">Coming up</h2>
               <button type="button" className={ghostButton} onClick={() => onOpen('regular')}>
                 Regular <ChevronRight size={18} />
               </button>
@@ -113,12 +113,12 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
                 <li key={event.id}>
                   <button
                     type="button"
-                    className="flex min-h-11 w-full items-center gap-3 text-left hover:bg-stone-50"
+                    className="flex min-h-11 w-full items-center gap-3 text-left hover:bg-sunken"
                     onClick={() => onOpenOccurrence(event, occurrence)}
                     aria-label={`${event.title} · ${occurrenceWords(occurrence, today)}`}
                   >
-                    <span className="min-w-0 flex-1 truncate text-lg font-medium text-stone-800">{event.title}</span>
-                    <span className="shrink-0 text-base font-medium text-forest-700">
+                    <span className="min-w-0 flex-1 truncate text-lg font-medium text-ink">{event.title}</span>
+                    <span className="shrink-0 text-base font-medium text-link">
                       {occurrenceWords(occurrence, today)}
                       {occurrence.moved ? ' · moved' : ''}
                     </span>
@@ -131,25 +131,25 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
 
         <section className={`${cardClass} flex ${regular.length ? 'shrink-0 py-4' : 'min-h-0 py-5'} flex-col px-6`} aria-label="Booked visits">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold text-stone-800">Booked visits</h2>
+            <h2 className="text-xl font-semibold text-ink">Booked visits</h2>
             <button type="button" className={ghostButton} onClick={() => onOpen('history')}>
               History <ChevronRight size={18} />
             </button>
           </div>
           {booked.length === 0 ? (
-            <p className="mt-2 text-base text-stone-600">No visits booked.</p>
+            <p className="mt-2 text-base text-muted">No visits booked.</p>
           ) : (
             <ul className="mt-2 min-h-0 overflow-y-auto">
               {booked.slice(0, regular.length ? 1 : 3).map((e, i) => {
                 const who = contactOf(contacts, e.contactId);
                 return (
-                  <li key={e.id} className="border-b border-stone-200 last:border-b-0">
-                    <button type="button" className="flex w-full items-center gap-4 py-2.5 text-left hover:bg-stone-50" onClick={() => onEditEntry(e)}>
+                  <li key={e.id} className="border-b border-line last:border-b-0">
+                    <button type="button" className="flex w-full items-center gap-4 py-2.5 text-left hover:bg-sunken" onClick={() => onEditEntry(e)}>
                       <DateTile date={e.date} strong={i === 0} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-lg font-semibold text-stone-800">{e.title}</span>
-                        <span className="block truncate text-base text-stone-600">
-                          <span className="font-medium text-forest-700">{relative(e.date, today)}</span>
+                        <span className="block truncate text-lg font-semibold text-ink">{e.title}</span>
+                        <span className="block truncate text-base text-muted">
+                          <span className="font-medium text-link">{relative(e.date, today)}</span>
                           {who || e.who ? ` · ${who?.name ?? e.who}` : ''}
                         </span>
                       </span>
@@ -163,20 +163,20 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
 
         <section className={`${cardClass} px-6 py-5`} aria-label="Warranties ending">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold text-stone-800">Warranties</h2>
+            <h2 className="text-xl font-semibold text-ink">Warranties</h2>
             <button type="button" className={ghostButton} onClick={() => onOpen('warranties')}>
               All <ChevronRight size={18} />
             </button>
           </div>
           {ending.length === 0 ? (
-            <p className="mt-2 text-base text-stone-600">None ending in the next {EXPIRING_DAYS} days.</p>
+            <p className="mt-2 text-base text-muted">None ending in the next {EXPIRING_DAYS} days.</p>
           ) : (
             <ul className="mt-1">
               {ending.slice(0, 2).map((w) => (
                 <li key={w.id}>
-                  <button type="button" className="flex min-h-12 w-full items-baseline justify-between gap-3 py-1.5 text-left hover:bg-stone-50" onClick={() => onEditWarranty(w)}>
-                    <span className="truncate text-lg font-medium text-stone-800">{w.item}</span>
-                    <span className="shrink-0 text-base font-semibold text-terracotta-dark">{warrantyText(w.warrantyEnd, today)}</span>
+                  <button type="button" className="flex min-h-12 w-full items-baseline justify-between gap-3 py-1.5 text-left hover:bg-sunken" onClick={() => onEditWarranty(w)}>
+                    <span className="truncate text-lg font-medium text-ink">{w.item}</span>
+                    <span className="shrink-0 text-base font-semibold text-attention">{warrantyText(w.warrantyEnd, today)}</span>
                   </button>
                 </li>
               ))}
@@ -187,11 +187,11 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         <section className={`${cardClass} flex items-center justify-between gap-4 px-6 py-5`} aria-label={`Spent in ${year}`}>
           <div>
             <p className={overline}>Spent in {year}</p>
-            <p className="text-sm text-stone-600">
+            <p className="text-sm text-muted">
               {thisYear.length} {thisYear.length === 1 ? 'entry' : 'entries'} in the history
             </p>
           </div>
-          <p className="text-3xl font-semibold text-stone-800 tabular-nums">{formatCents(spent, { headline: true })}</p>
+          <p className="text-3xl font-semibold text-ink tabular-nums">{formatCents(spent, { headline: true })}</p>
         </section>
       </div>
     </div>
@@ -213,15 +213,15 @@ function Lead({ task, today, contact, onDone, onEdit }: { task: HomeTask; today:
     <div className="mt-3">
       <div className="flex items-start gap-5">
         <CategoryTile category={task.category} attention={late} size="lg" />
-        <button type="button" className="-mx-2 min-w-0 flex-1 rounded-xl px-2 text-left hover:bg-stone-50" onClick={onEdit} aria-label={`Edit ${task.title}`}>
-          <p className={`text-3xl leading-tight font-semibold tracking-tight sm:text-4xl ${late ? 'text-terracotta-dark' : 'text-stone-800'}`}>{headline(task.title, task.due, today)}</p>
-          <p className="mt-2 text-lg text-stone-600 sm:text-xl">
+        <button type="button" className="-mx-2 min-w-0 flex-1 rounded-xl px-2 text-left hover:bg-sunken" onClick={onEdit} aria-label={`Edit ${task.title}`}>
+          <p className={`text-3xl leading-tight font-semibold tracking-tight sm:text-4xl ${late ? 'text-attention' : 'text-ink'}`}>{headline(task.title, task.due, today)}</p>
+          <p className="mt-2 text-lg text-muted sm:text-xl">
             {late ? 'Was due ' : ''}
             {longDate(task.due, today)} · {describeSchedule(task.schedule)}
           </p>
         </button>
       </div>
-      {task.notes && <p className="mt-2 sm:ml-[76px] text-base text-stone-600">{task.notes}</p>}
+      {task.notes && <p className="mt-2 sm:ml-[76px] text-base text-muted">{task.notes}</p>}
       <div className="mt-1 sm:ml-[76px]">
         <WhoLine contact={contact} />
       </div>
@@ -237,11 +237,11 @@ function Lead({ task, today, contact, onDone, onEdit }: { task: HomeTask; today:
 function Row({ task, today, onDone, onEdit }: { task: HomeTask; today: Ymd; onDone: () => void; onEdit: () => void }) {
   const late = dueState(task.due, today).state === 'overdue';
   return (
-    <li className="flex items-center gap-4 border-b border-stone-200 py-2.5 last:border-b-0">
+    <li className="flex items-center gap-4 border-b border-line py-2.5 last:border-b-0">
       <CategoryTile category={task.category} attention={late} />
-      <button type="button" className="-mx-2 flex min-h-11 min-w-0 flex-1 flex-col justify-center rounded-xl px-2 text-left hover:bg-stone-50" onClick={onEdit}>
-        <span className="text-lg leading-snug font-semibold text-stone-800 [overflow-wrap:anywhere]">{task.title}</span>
-        <span className={`text-base ${late ? 'font-semibold text-terracotta-dark' : 'text-stone-600'}`}>{dueText(task.due, today)}</span>
+      <button type="button" className="-mx-2 flex min-h-11 min-w-0 flex-1 flex-col justify-center rounded-xl px-2 text-left hover:bg-sunken" onClick={onEdit}>
+        <span className="text-lg leading-snug font-semibold text-ink [overflow-wrap:anywhere]">{task.title}</span>
+        <span className={`text-base ${late ? 'font-semibold text-attention' : 'text-muted'}`}>{dueText(task.due, today)}</span>
       </button>
       <button type="button" className={secondaryButton} onClick={onDone} aria-label={`Mark done: ${task.title}`}>
         <Check size={18} /> Done
@@ -273,11 +273,11 @@ function PrepRow({ task, now, today, me, onToggle, onSkip }: { task: PrepTask; n
         <EventTile kind={event.kind} attention={late} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-lg leading-snug font-semibold text-stone-800 [overflow-wrap:anywhere]">
+        <p className="text-lg leading-snug font-semibold text-ink [overflow-wrap:anywhere]">
           {prep.title}
-          {!done && <span className={late ? 'text-terracotta-dark' : 'font-medium text-forest-700'}> · {state === 'due' ? `was due ${when}` : when}</span>}
+          {!done && <span className={late ? 'text-attention' : 'font-medium text-link'}> · {state === 'due' ? `was due ${when}` : when}</span>}
         </p>
-        <p className={`text-base ${late ? 'font-semibold text-terracotta-dark' : 'text-stone-600'}`}>{detail}</p>
+        <p className={`text-base ${late ? 'font-semibold text-attention' : 'text-muted'}`}>{detail}</p>
       </div>
       {!done && state !== 'missed' && (
         <button type="button" className={`${ghostButton} shrink-0`} onClick={onSkip} aria-label={`Skip: ${prep.title}`}>
@@ -291,10 +291,10 @@ function PrepRow({ task, now, today, me, onToggle, onSkip }: { task: PrepTask; n
         onClick={onToggle}
         className={`inline-flex min-h-14 shrink-0 items-center gap-2 rounded-xl border px-4 text-lg font-semibold sm:px-5 transition-colors duration-150 ${
           skipped
-            ? 'border-stone-300 bg-stone-100 text-stone-700 hover:border-stone-400'
+            ? 'border-line bg-sunken text-ink-soft hover:border-stone-400 dark:hover:border-forest-400'
             : done
-              ? 'border-forest-700 bg-forest-700 text-white hover:bg-forest-600'
-              : 'border-stone-200 bg-white text-stone-800 hover:border-forest-400'
+              ? 'border-primary bg-primary text-on-primary hover:bg-primary-hover'
+              : 'border-line bg-surface text-ink hover:border-forest-400'
         }`}
       >
         {skipped ? <SkipForward size={22} /> : <Check size={22} />} {word}

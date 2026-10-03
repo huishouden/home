@@ -20,26 +20,26 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
   return (
     <div className="space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-stone-800">Warranties and manuals</h2>
+        <h2 className="text-2xl font-semibold text-ink">Warranties and manuals</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
           <Plus size={20} /> Add item
         </button>
       </div>
       {store.helping && <RoleNote action="edit-others" />}
       {sorted.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-stone-600`}>No appliances yet. Add the fridge, water heater and the rest with their receipts, so the warranty is easy to find.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>No appliances yet. Add the fridge, water heater and the rest with their receipts, so the warranty is easy to find.</p>
       )}
       <div className="grid items-start gap-6 md:grid-cols-2">
         {sorted.map((w) => {
           const { state } = warrantyState(w.warrantyEnd, today);
           const contact = w.contactId ? contacts.find((c) => c.id === w.contactId) : undefined;
-          const tone = state === 'expiring' ? 'text-terracotta-dark font-semibold' : state === 'covered' ? 'text-forest-700 font-medium' : 'text-stone-600';
+          const tone = state === 'expiring' ? 'text-attention font-semibold' : state === 'covered' ? 'text-link font-medium' : 'text-muted';
           return (
             <section key={w.id} className={`${cardClass} p-5`} aria-label={w.item}>
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xl font-semibold text-stone-800 [overflow-wrap:anywhere]">{w.item}</h3>
-                  {w.details && <p className="text-base text-stone-600 [overflow-wrap:anywhere]">{w.details}</p>}
+                  <h3 className="text-xl font-semibold text-ink [overflow-wrap:anywhere]">{w.item}</h3>
+                  {w.details && <p className="text-base text-muted [overflow-wrap:anywhere]">{w.details}</p>}
                 </div>
                 {mayChange(store, w) && (
                   <>
@@ -61,7 +61,7 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
                 )}
               </div>
               <p className={`mt-2 text-lg ${tone}`}>{warrantyText(w.warrantyEnd, today)}</p>
-              <p className="text-base text-stone-600">
+              <p className="text-base text-muted">
                 {[w.purchaseDate && `Bought ${shortDate(w.purchaseDate)}`, w.warrantyEnd && `warranty to ${shortDate(w.warrantyEnd)}`].filter(Boolean).join(', ') || 'No dates yet'}
               </p>
               {(w.receiptUrl || w.manualUrl) && (
@@ -79,7 +79,7 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
                 </div>
               )}
               <WhoLine contact={contact} compact />
-              {w.notes && <p className="mt-1 text-base whitespace-pre-line text-stone-600">{w.notes}</p>}
+              {w.notes && <p className="mt-1 text-base whitespace-pre-line text-muted">{w.notes}</p>}
             </section>
           );
         })}
