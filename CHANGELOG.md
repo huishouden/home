@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/huishouden/home/compare/v1.7.1...v1.7.2) (2026-10-03)
+
+
+### Bug Fixes
+
+* a new upkeep job asks when it was last done instead of assuming it; dialogs keep focus on phones (pwa-kit 0.51.0) ([#30](https://github.com/huishouden/home/issues/30)) ([f45db82](https://github.com/huishouden/home/commit/f45db825cbe22343a2b2d597faa6d0c89a2e40f5))
+
 ## [1.7.1](https://github.com/huishouden/home/compare/v1.7.0...v1.7.1) (2026-10-03)
 
 
