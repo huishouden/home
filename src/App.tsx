@@ -10,7 +10,7 @@ import { DEMO_NOW } from './lib/demo';
 import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
 import { HomeApp } from './HomeApp';
 import { Header } from './components/Header';
-import { cardClass, primaryButton, useToast } from '@huishouden/pwa-kit/react/ui';
+import { cardClass, primaryButton, SampleBanner, useToast } from '@huishouden/pwa-kit/react/ui';
 import { PORTAL_URL } from './lib/portal';
 
 export default function App() {
@@ -122,10 +122,7 @@ function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => n
   const asHelper = new URLSearchParams(window.location.search).get('as') === 'helper';
   const store = useMemo(() => (asHelper ? { ...demo, me: 'sitter@example.com', helping: true } : demo), [demo, asHelper]);
   const banner = (
-    <div className={`${cardClass} flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5`} role="note">
-      <span className="rounded-full bg-terracotta-light px-3 py-1 text-sm font-semibold text-terracotta-dark">Sample data</span>
-      <p className="min-w-0 flex-1 text-base text-stone-600">{signInError ?? 'An invented house. Nothing is saved. Sign in to use your household’s own.'}</p>
-    </div>
+    <SampleBanner text="An invented house. Nothing is saved. Sign in to use your household’s own." notice={signInError ?? undefined} />
   );
   return <HomeApp store={store} user={null} {...frame} toast={toast} notify={notify} clearToast={clear} banner={banner} />;
 }
