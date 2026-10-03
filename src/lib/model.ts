@@ -259,5 +259,3 @@ export function eventDoc(input: EventInput, s: Stamp): HomeEventData {
 
 export const prepTickDoc = (by: string, at: number): PrepTickData => ({ done: true, at: Math.round(at), by });
 
-/** Strips the id for writing a document back (Undo). */
-export const withoutId = <T extends { id: string }>({ id: _id, ...rest }: T) => rest;
