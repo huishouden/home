@@ -101,6 +101,12 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     notify(`Done: ${t.prep.title}`, () => actions.untickPrep(t.event, t.occurrence.original));
   };
 
+  /** Not needed this time: shown as skipped (tap to undo), with Undo. */
+  const skipPrep = (t: PrepTask) => {
+    actions.skipPrep(t.event, t.occurrence.original);
+    notify(`Skipped: ${t.prep.title}`, () => actions.untickPrep(t.event, t.occurrence.original));
+  };
+
 
 
   /** Calendar events into the history as visits: Import from calendar and the new-in-your-calendar card. */
@@ -139,10 +145,15 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     notify(`Done: ${t.title}. Next due ${shortDate(next, today)}.`, () => actions.undoDone(t, entryId));
   };
 
+  const resumeTask = (t: HomeTask) => {
+    actions.resumeTask(t);
+    notify(`Resumed ${t.title}`, () => actions.restoreTask(t));
+  };
+
   let content: ReactNode;
   if (!store.ready) content = <p className="p-2 text-lg text-stone-600">Loading the house</p>;
   else if (tab === 'upkeep')
-    content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((t: HomeTask) => setTask({ item: t }))} onDone={markDone} />;
+    content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((t: HomeTask) => setTask({ item: t }))} onDone={markDone} onResume={resumeTask} />;
   else if (tab === 'history')
     content = (
       <History
@@ -183,6 +194,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         prep={prep}
         now={now}
         onTogglePrep={togglePrep}
+        onSkipPrep={skipPrep}
         onOpenOccurrence={(event, o) => setOccurrence({ event, occurrence: o })}
       />
     );
@@ -230,6 +242,15 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
                   const gone = task.item!;
                   actions.deleteTask(gone.id);
                   notify(`Deleted ${gone.title}`, () => actions.restoreTask(gone));
+                }
+              : undefined
+          }
+          onPause={
+            task.item && task.item.pausedAt === undefined
+              ? () => {
+                  const was = task.item!;
+                  actions.pauseTask(was);
+                  notify(`Paused ${was.title}. It won't come due until resumed.`, () => actions.restoreTask(was));
                 }
               : undefined
           }

@@ -153,3 +153,37 @@ test('an existing job: last done and next due can be changed directly', async ({
   await edit.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('listitem', { name: 'Dryer vent cleaning' })).toContainText('Overdue by 2 weeks');
 });
+
+test('a paused job stays in Upkeep as Paused, off the overview, until it is resumed', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
+  const paused = page.getByRole('region', { name: 'Paused' });
+  await expect(paused.getByRole('listitem', { name: 'Pool filter clean' })).toContainText('Paused Oct 1');
+
+  // Pause from the job's dialog: kept, out of the due groups and the overview.
+  await page.getByRole('button', { name: 'Edit Gutter cleaning' }).click();
+  await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Pause' }).click();
+  await expect(page.getByText("Paused Gutter cleaning. It won't come due until resumed.")).toBeVisible();
+  await expect(paused.getByRole('listitem', { name: 'Gutter cleaning' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Overdue' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await expect(page.getByText('Overdue: gutter cleaning')).toHaveCount(0);
+  await expect(page.getByText('Change HVAC filter due in 4 days')).toBeVisible();
+
+  // Resume: due again, from today since its date passed while paused.
+  await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
+  await paused.getByRole('button', { name: 'Resume: Gutter cleaning' }).click();
+  await expect(page.getByText('Resumed Gutter cleaning')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Next two weeks' }).getByRole('listitem', { name: 'Gutter cleaning' })).toContainText('Due today');
+});
+
+test('the thing to do before can be skipped, shows as skipped, and the skip undone', async ({ page }) => {
+  await page.goto('./');
+  const row = page.getByRole('listitem', { name: 'Unlock the side gate' });
+  await row.getByRole('button', { name: 'Skip: Unlock the side gate' }).click();
+  await expect(page.getByText('Skipped: Unlock the side gate')).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Skipped: Unlock the side gate' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(row).toContainText('Skipped by');
+  await row.getByRole('button', { name: 'Skipped: Unlock the side gate' }).click();
+  await expect(row.getByRole('button', { name: 'Done: Unlock the side gate' })).toHaveAttribute('aria-pressed', 'false');
+});

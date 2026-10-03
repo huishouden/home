@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { DEMO_NOW, DEMO_TODAY, demoData } from './demo';
 import { isEventRule, isSchedule } from '@huishouden/pwa-kit/schedule';
 import { occurrencesOf, prepTasks } from './events';
-import { headline, needsAttention } from './upkeep';
+import { activeJobs, headline, needsAttention } from './upkeep';
 import { warrantyText } from './warranty';
 import { daysBetween } from '@huishouden/pwa-kit/time';
 
@@ -11,7 +11,7 @@ const d = demoData();
 test('the sample house is in 2031 and needs attention', () => {
   expect(new Date(DEMO_NOW).getFullYear()).toBe(2031);
   expect(DEMO_TODAY).toBe('2031-10-16');
-  const attention = needsAttention(d.tasks, DEMO_TODAY).map((t) => headline(t.title, t.due, DEMO_TODAY));
+  const attention = needsAttention(activeJobs(d.tasks), DEMO_TODAY).map((t) => headline(t.title, t.due, DEMO_TODAY));
   expect(attention.slice(0, 3)).toEqual(['Overdue: gutter cleaning', 'Change HVAC filter due in 4 days', 'Pest control visit due in 12 days']);
 });
 

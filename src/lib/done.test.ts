@@ -1,5 +1,5 @@
-import { expect, test } from 'bun:test';
-import { TICK_FIELDS, doneFromEntry, markDone, tickedTask } from './done';
+import { describe, expect, test } from 'bun:test';
+import { TICK_FIELDS, doneFromEntry, markDone, resumedDue, tickedTask } from './done';
 import { mayChange } from '../data/types';
 import type { HomeTask } from './model';
 
@@ -45,4 +45,15 @@ test('helpers and kids change only what they added; everyone else anything', () 
   expect(mayChange(helper, { by: 'alex@example.com' })).toBe(false);
   expect(mayChange(helper, {})).toBe(false);
   expect(mayChange({ me: 'sam@example.com' }, { by: 'alex@example.com' })).toBe(true);
+});
+
+describe('resuming a paused job', () => {
+  const after = { kind: 'after-done', every: 3, unit: 'month' } as const;
+  const monthly = { kind: 'fixed', every: 1, unit: 'month', anchor: '2031-01-01' } as const;
+  test('a date still ahead is kept; one that passed while paused is now (after-done) or the next set date', () => {
+    expect(resumedDue({ schedule: after, due: '2031-11-02' }, '2031-10-16')).toBe('2031-11-02');
+    expect(resumedDue({ schedule: after, due: '2031-10-16' }, '2031-10-16')).toBe('2031-10-16');
+    expect(resumedDue({ schedule: after, due: '2031-06-01' }, '2031-10-16')).toBe('2031-10-16');
+    expect(resumedDue({ schedule: monthly, due: '2031-06-01' }, '2031-10-16')).toBe('2031-11-01');
+  });
 });

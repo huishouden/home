@@ -67,3 +67,32 @@ describe('editing', () => {
     expect(h.data.events.find((e) => e.id === event.id)).toEqual(event);
   });
 });
+
+describe('pausing a job', () => {
+  test('pause keeps the job and its dates; an edit keeps it paused; resume brings it back due from today when its date passed', () => {
+    const h = harness();
+    const pool = h.data.tasks.find((t) => t.id === 'demo-task-gutters')!;
+    h.actions.pauseTask(pool);
+    const paused = h.data.tasks.find((t) => t.id === pool.id)!;
+    expect(paused).toMatchObject({ pausedAt: DEMO_NOW, updatedAt: DEMO_NOW, due: pool.due, by: pool.by });
+    h.actions.saveTask(pool.id, { title: 'Gutters and downspouts', category: pool.category, schedule: pool.schedule, due: pool.due, lastDone: pool.lastDone, contactId: pool.contactId });
+    expect(h.data.tasks.find((t) => t.id === pool.id)).toMatchObject({ title: 'Gutters and downspouts', pausedAt: DEMO_NOW });
+    h.actions.resumeTask(h.data.tasks.find((t) => t.id === pool.id)!);
+    const resumed = h.data.tasks.find((t) => t.id === pool.id)!;
+    expect(resumed.pausedAt).toBeUndefined();
+    expect('pausedAt' in resumed).toBe(false);
+    expect(resumed.due).toBe('2031-10-16');
+  });
+});
+
+describe('skipping the thing to do before', () => {
+  test('a skip is a tick marked skipped, in the member’s name; untick removes it', () => {
+    const h = harness();
+    const lawn = h.data.events.find((e) => e.id === 'demo-event-lawn')!;
+    h.actions.skipPrep(lawn, '2031-10-17');
+    const id = prepTickId(lawn.id, '2031-10-17');
+    expect(h.data.prep.find((p) => p.id === id)).toEqual({ id, done: true, skipped: true, at: DEMO_NOW, by: 'alex@example.com' });
+    h.actions.untickPrep(lawn, '2031-10-17');
+    expect(h.data.prep.some((p) => p.id === id)).toBe(false);
+  });
+});

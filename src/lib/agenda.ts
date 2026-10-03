@@ -8,7 +8,7 @@ import type { HomeTask, ServiceEntry, Warranty } from './model';
 import { eventAgenda, eventRef, prepAgenda, prepRef } from './events';
 import type { HomeData } from './demo';
 import type { TabId } from './tabs';
-import { dueState } from './upkeep';
+import { dueState, isPaused } from './upkeep';
 
 // What Home puts on the household agenda (households/{id}/agenda, read by the portal): each job's
 // next due date, visits booked ahead, warranties ending, and regular events (each occurrence of the
@@ -34,8 +34,9 @@ const contactName = (contacts: Contact[], id?: string) => (id ? contacts.find((c
 const joined = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ') || undefined;
 const inWindow = (items: AgendaEntry[], now: number) => items.filter((i) => inAgendaWindow(i, now));
 
-/** A job's next due day: overdue once that day has passed. Only the next one, not every occurrence. */
+/** A job's next due day: overdue once that day has passed. Only the next one, not every occurrence; none while paused. */
 export function jobAgenda(task: HomeTask, contacts: Contact[], now: number): AgendaEntry[] {
+  if (isPaused(task)) return [];
   const overdue = dueState(task.due, toYmd(now)).state === 'overdue';
   return inWindow(
     [

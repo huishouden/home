@@ -3,6 +3,8 @@ import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/
 import { commitOps } from '@huishouden/pwa-kit/firestore';
 import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
 import { syncReminders } from '@huishouden/pwa-kit/reminders';
+import { syncTodos } from '@huishouden/pwa-kit/todos';
+import { todoItems } from '../lib/todos';
 import { householdContacts, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { AGENDA_APP, APP_URL, agendaItems, jobAgenda, jobRef, screen, visitAgenda, visitRef, warrantyAgenda, warrantyRef, type AgendaEntry } from '../lib/agenda';
 import { eventAgenda, eventRef, prepAgenda, prepReminders, prepRef } from '../lib/events';
@@ -20,6 +22,8 @@ const { tasks: TASKS, log: LOG, warranties: WARRANTIES, events: EVENTS, prep: PR
 const PREP_LOAD_DAYS = 21;
 const REGULAR_URL = screen('regular');
 const HOME_URL = APP_URL;
+/** The to-do list catches up this long after the last change. */
+const TODO_DELAY_MS = 3000;
 
 /**
  * Live household data from Firestore with onSnapshot listeners. Writes are fire-and-forget: the
@@ -80,6 +84,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
   // Once per open, with every list loaded: makes the household agenda match Home's data, which also
   // repairs what another device or an older version left and moves jobs to overdue as days pass.
   const synced = useRef(false);
+  const todosSynced = useRef(false);
   const allLoaded = [TASKS, LOG, WARRANTIES, EVENTS, PREP, 'contacts'].every((n) => loaded.has(n));
   useEffect(() => {
     if (!allLoaded || synced.current) return;
@@ -90,6 +95,20 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     const { events, prep } = current.current;
     syncReminders(db, householdId, AGENDA_APP, prepReminders(events, prep, now, HOME_URL), me, now, { restricted }).catch((e) => console.warn("Couldn't schedule reminders", e));
   }, [allLoaded, householdId, me, restricted]);
+
+  // The household to-do list follows Home's data: on open, and a few seconds after any change
+  // (done here or in the portal, a day passing on the next open). Replace-by-app, writes only what changed.
+  useEffect(() => {
+    if (!allLoaded) return;
+    const timer = setTimeout(
+      () => {
+        syncTodos(db, householdId, AGENDA_APP, todoItems(current.current, Date.now()), { by: me, restricted }).catch((e) => console.warn("Couldn't update the household to-do list", e));
+      },
+      todosSynced.current ? TODO_DELAY_MS : 0,
+    );
+    todosSynced.current = true;
+    return () => clearTimeout(timer);
+  }, [allLoaded, householdId, me, restricted, tasks, contacts, events, prep]);
 
   const actions = useMemo<HomeActions>(() => {
     // The agenda follows each save; a failure there never fails the save (the next open repairs it).

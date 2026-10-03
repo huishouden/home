@@ -110,6 +110,18 @@ Items are all-day, cover 30 days back to 180 days ahead (overdue jobs whatever t
 `#upkeep`, `#history` or `#warranties`. Each save updates its record's items; opening the app
 reconciles everything. The signed-out sample house writes nothing. The mapping is `src/lib/agenda.ts`.
 
+It also publishes its open things to the household to-do list (`households/{householdId}/todos`,
+through `@huishouden/pwa-kit/todos`), which the portal's To-do tab shows with Done and a cancel:
+
+| Ref | What | Done | Cancel |
+|---|---|---|---|
+| `job:<id>` | jobs overdue or due in the next two weeks, not paused; added when the job was | lastDone today, next due, and a history entry (everyone) | Pause (admins, members, whoever added it) |
+| `prep:<eventId>_<day>` | the thing to do before a regular event, from when Overview shows it until the event begins; added when it came up (14 hours before its deadline) | ticked in the member's name (everyone) | Skip: ticked as skipped (everyone) |
+
+A paused job keeps its schedule but is due nowhere (Overview, the agenda, the to-do list); Upkeep lists
+it under Paused with Resume. A skipped thing to do before shows as Skipped on Overview. The list is
+synced on open and a few seconds after each change. The mapping is `src/lib/todos.ts`.
+
 Find in my calendar and Import from calendar read Google Calendar (read-only) through
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
 places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed.

@@ -1,8 +1,8 @@
-import { Check, Pencil, Plus } from 'lucide-react';
+import { Check, Pencil, Play, Plus } from 'lucide-react';
 import type { HomeTask } from '../lib/model';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
-import { SOON_DAYS, byDue, dueState, dueText, lastDoneText } from '../lib/upkeep';
-import { shortDate, type Ymd } from '@huishouden/pwa-kit/time';
+import { SOON_DAYS, activeJobs, byDue, dueState, dueText, isPaused, lastDoneText } from '../lib/upkeep';
+import { shortDate, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, WhoLine } from '../components/bits';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
@@ -10,15 +10,17 @@ import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { mayChange } from '../data/types';
 
 /** Every recurring job, soonest first, grouped by how soon. */
-export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
+export function Upkeep({ store, today, onAdd, onEdit, onDone, onResume }: {
   store: HomeStore;
   today: Ymd;
   onAdd: () => void;
   onEdit: (t: HomeTask) => void;
   onDone: (t: HomeTask) => void;
+  onResume: (t: HomeTask) => void;
 }) {
   const { tasks, contacts } = store.data;
-  const sorted = byDue(tasks);
+  const sorted = byDue(activeJobs(tasks));
+  const paused = tasks.filter(isPaused).sort((a, b) => a.title.localeCompare(b.title));
   const groups: { label: string; items: HomeTask[] }[] = [
     { label: 'Overdue', items: sorted.filter((t) => dueState(t.due, today).state === 'overdue') },
     { label: 'Next two weeks', items: sorted.filter((t) => ['today', 'soon'].includes(dueState(t.due, today, SOON_DAYS).state)) },
@@ -77,6 +79,31 @@ export function Upkeep({ store, today, onAdd, onEdit, onDone }: {
           </ul>
         </section>
       ))}
+      {paused.length > 0 && (
+        <section aria-label="Paused">
+          <h3 className={`${overline} mb-2`}>Paused</h3>
+          <ul className={cardClass}>
+            {paused.map((t) => (
+              <li key={t.id} className="flex items-start gap-4 border-b border-stone-200 p-4 last:border-b-0 sm:p-5" aria-label={t.title}>
+                <CategoryTile category={t.category} />
+                <div className="min-w-0 flex-1">
+                  <button type="button" className="-mx-1 min-h-11 rounded-xl px-1 text-left text-xl font-semibold text-stone-600 hover:bg-stone-50" onClick={() => onEdit(t)}>
+                    {t.title}
+                  </button>
+                  <p className="mt-0.5 text-base text-stone-600">
+                    Paused {shortDate(toYmd(t.pausedAt!), today)} · {describeSchedule(t.schedule)} · {lastDoneText(t.lastDone, today)}
+                  </p>
+                </div>
+                {mayChange(store, t) && (
+                  <button type="button" className={`${secondaryButton} shrink-0`} onClick={() => onResume(t)} aria-label={`Resume: ${t.title}`}>
+                    <Play size={18} /> <span className="hidden sm:inline">Resume</span>
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

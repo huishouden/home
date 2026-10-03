@@ -34,3 +34,9 @@ export function lastDoneText(lastDone: Ymd | undefined, today: Ymd): string {
   if (days === 1) return 'Done yesterday';
   return `Done ${spanWords(days)} ago`;
 }
+
+/** Paused: kept with its schedule, but not due anywhere (Overview, Upkeep's due groups, the agenda, the to-do list). */
+export const isPaused = (t: { pausedAt?: number }) => t.pausedAt !== undefined;
+
+/** The jobs that come due: every one not paused. */
+export const activeJobs = <T extends { pausedAt?: number }>(tasks: T[]): T[] => tasks.filter((t) => !isPaused(t));

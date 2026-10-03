@@ -10,6 +10,10 @@ export type { HomeData };
 export interface HomeActions {
   saveTask(id: string | null, input: TaskInput): void;
   deleteTask(id: string): void;
+  /** Keeps the job but stops it coming due anywhere, until resumed. */
+  pauseTask(task: HomeTask): void;
+  /** Un-pauses a job: due again from its due date, or from today when that passed while paused. */
+  resumeTask(task: HomeTask): void;
   restoreTask(task: HomeTask): void;
   /** Rolls the schedule forward and records a history entry; returns what Undo needs. */
   markDone(task: HomeTask, doneOn: Ymd): { entryId: string; next: Ymd };
@@ -29,6 +33,8 @@ export interface HomeActions {
   changeOccurrence(event: HomeEvent, original: Ymd, change: OccurrenceChange | null): void;
   /** Ticks off the thing to do before one occurrence (by its original day), in the member's name. */
   tickPrep(event: HomeEvent, original: Ymd): void;
+  /** Marks the thing to do before one occurrence as not needed this time, in the member's name. */
+  skipPrep(event: HomeEvent, original: Ymd): void;
   untickPrep(event: HomeEvent, original: Ymd): void;
   saveContact(id: string | null, input: ContactInput): void;
   deleteContact(id: string): void;
