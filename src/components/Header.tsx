@@ -28,7 +28,7 @@ export function Header({ tabs, tab, onTab, user, onSignIn, onSignOut, signingIn 
   }, [tab]);
   return (
     <AppBar app="Home" glyph="wrench" portalUrl={PORTAL_URL} version={VERSION} user={user} signingIn={signingIn} onSignIn={onSignIn} onSignOut={onSignOut}>
-      <SectionTabs tabs={tabs} tab={tab} onTab={onTab} compact />
+      <SectionTabs tabs={tabs} tab={tab} onTab={onTab} />
     </AppBar>
   );
 }
