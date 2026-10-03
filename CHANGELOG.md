@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/huishouden/home/compare/v1.7.2...v1.8.0) (2026-10-03)
+
+
+### Features
+
+* sections in a bottom bar on phones (kit 0.52.0) ([#32](https://github.com/huishouden/home/issues/32)) ([509db21](https://github.com/huishouden/home/commit/509db21dbd3c53137d3e6f390570e2b62abca568))
+
 ## [1.7.2](https://github.com/huishouden/home/compare/v1.7.1...v1.7.2) (2026-10-03)
 
 
