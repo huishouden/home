@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/huishouden/home/compare/v1.9.0...v1.9.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* Done on a set-dates job moves it past today, also from the to-do list ([#36](https://github.com/huishouden/home/issues/36)) ([c0a771f](https://github.com/huishouden/home/commit/c0a771f055284bbe92806abcdf1c4fa92afeb886))
+
 ## [1.9.0](https://github.com/huishouden/home/compare/v1.8.0...v1.9.0) (2026-10-03)
 
 
