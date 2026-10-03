@@ -18,8 +18,8 @@ import type { HomeActions, HomeStore } from './types';
 const { tasks: TASKS, log: LOG, warranties: WARRANTIES, events: EVENTS, prep: PREP } = COLLECTIONS;
 /** Ticks older than this are history nobody looks at: not loaded. */
 const PREP_LOAD_DAYS = 21;
-const REGULAR_URL = screen(APP_URL, 'regular');
-const HOME_URL = `${APP_URL}/`;
+const REGULAR_URL = screen('regular');
+const HOME_URL = APP_URL;
 
 /**
  * Live household data from Firestore with onSnapshot listeners. Writes are fire-and-forget: the

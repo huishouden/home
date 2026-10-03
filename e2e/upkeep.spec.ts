@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 // The sample house (signed out, nothing saved). Its clock starts on Thursday 16 October 2031.
 
 test('the overview leads with what is overdue, then what is due soon', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   const upkeep = page.getByRole('region', { name: 'Upkeep' });
   await expect(upkeep.getByText('Overdue: gutter cleaning')).toBeVisible();
   await expect(upkeep).toContainText('1 overdue');
@@ -16,7 +16,7 @@ test('the overview leads with what is overdue, then what is due soon', async ({ 
 });
 
 test('Done rolls the job forward, records it in the history, and can be undone', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Mark done: Gutter cleaning' }).click();
   await expect(page.getByText('Done: Gutter cleaning. Next due Apr 16, 2032.')).toBeVisible();
   await expect(page.getByText('Change HVAC filter due in 4 days')).toBeVisible();
@@ -31,7 +31,7 @@ test('Done rolls the job forward, records it in the history, and can be undone',
 });
 
 test('a new job on set dates gets its next due date from the schedule', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
   await page.getByRole('button', { name: 'Add job' }).click();
   const dialog = page.getByRole('dialog', { name: 'New upkeep job' });
@@ -50,7 +50,7 @@ test('a new job on set dates gets its next due date from the schedule', async ({
 });
 
 test('an after-done job starts one interval after the last time it was done', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
   await page.getByRole('button', { name: 'Add job' }).click();
   const dialog = page.getByRole('dialog', { name: 'New upkeep job' });
@@ -69,7 +69,7 @@ test('an after-done job starts one interval after the last time it was done', as
 });
 
 test('deleting a job can be undone', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
   await page.getByRole('button', { name: 'Edit HOA dues' }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit job' });

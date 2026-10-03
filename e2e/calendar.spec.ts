@@ -6,7 +6,7 @@ import { calendarEvents, mockCalendar } from './fixtures/calendar';
 // for the calendar with window.__mockCalendarEvents, which the kit's search answers from.
 
 test('signed out, calendar search is off and says why', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'History', exact: true }).first().click();
   await expect(page.getByRole('button', { name: 'Import from calendar' })).toBeDisabled();
   await expect(page.getByText('Sign in to search your calendar.')).toBeVisible();
@@ -21,7 +21,7 @@ test('signed out, calendar search is off and says why', async ({ page }) => {
 test.describe('with a calendar', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(mockCalendar, calendarEvents);
-    await page.goto('/');
+    await page.goto('./');
   });
 
   test('Find in my calendar sets the job’s next due date from a booked visit', async ({ page }) => {
@@ -101,7 +101,7 @@ test.describe('new in your calendar', () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime('2031-10-16T10:30:00');
     await stubCalendar(page, { events: calendarEvents });
-    await page.goto('/');
+    await page.goto('./');
   });
 
   test('offers new visits on the overview; Add and Not this one', async ({ page }) => {
@@ -136,7 +136,7 @@ test.describe('new in your calendar', () => {
 test('no calendar token on the device: no card and no Google window', async ({ page }) => {
   await page.clock.setFixedTime('2031-10-16T10:30:00');
   await stubCalendar(page, { events: calendarEvents, cachedToken: false });
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.getByRole('heading').first()).toBeVisible();
   await expect(page.getByRole('region', { name: 'New in your calendar' })).toHaveCount(0);
   expect(page.context().pages()).toHaveLength(1);

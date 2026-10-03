@@ -38,7 +38,7 @@ describe('jobs', () => {
         start: allDayStart(at(4)),
         allDay: true,
         detail: 'Every 3 months · Example Heating & Air',
-        url: 'https://huishouden-home.web.app/#upkeep',
+        url: 'https://huishouden-piekstra.web.app/home/#upkeep',
         status: 'upcoming',
       },
     ]);
@@ -70,7 +70,7 @@ describe('visits', () => {
 
   test('a booked visit is an all-day appointment with no status, naming the contact', () => {
     expect(visitAgenda(visit, contacts, now)).toEqual([
-      { kind: 'appointment', title: 'Furnace tune-up', start: allDayStart(at(9)), allDay: true, detail: 'Example Heating & Air', url: `${APP_URL}/#history` },
+      { kind: 'appointment', title: 'Furnace tune-up', start: allDayStart(at(9)), allDay: true, detail: 'Example Heating & Air', url: `${APP_URL}#history` },
     ]);
   });
 
@@ -89,7 +89,7 @@ describe('visits', () => {
 describe('warranties', () => {
   test('a warranty ending within 180 days is a renewal on its end day', () => {
     expect(warrantyAgenda(dishwasher, now)).toEqual([
-      { kind: 'renewal', title: 'Dishwasher warranty ends', start: allDayStart(at(46)), allDay: true, detail: 'Example Appliances DW-100', url: `${APP_URL}/#warranties` },
+      { kind: 'renewal', title: 'Dishwasher warranty ends', start: allDayStart(at(46)), allDay: true, detail: 'Example Appliances DW-100', url: `${APP_URL}#warranties` },
     ]);
   });
 
@@ -116,7 +116,7 @@ describe('everything', () => {
     expect(AGENDA_APP).toBe('home');
     expect(items.some((i) => i.kind === 'due' && i.status === 'overdue')).toBe(true);
     for (const i of items) {
-      expect(i.url.startsWith(`${APP_URL}/#`)).toBe(true);
+      expect(i.url.startsWith(`${APP_URL}#`)).toBe(true);
       expect(i.title.length).toBeLessThanOrEqual(120);
       const regular = i.ref.startsWith('event:') || i.ref.startsWith('prep:');
       if (!regular) expect(i.allDay).toBe(true);

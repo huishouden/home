@@ -7,7 +7,7 @@ import {
 import { eventDoc, type HomeEvent, type PrepTick } from './model';
 
 // Thursday 16 October 2031 is pickup day.
-const URL = 'https://huishouden-home.web.app/#regular';
+const URL = 'https://huishouden-piekstra.web.app/home/#regular';
 const trash: HomeEvent = {
   id: 'e1',
   title: 'Garbage pickup',
@@ -153,7 +153,7 @@ describe('the household agenda and reminders', () => {
   });
 
   test('a reminder at each deadline of the next two weeks, not for ticked ones or ones without remind', () => {
-    const r = prepReminders([trash, { ...lawn, prep: { title: 'Gate', offset: { daysBefore: 0, time: '07:00' }, remind: false } }], [tick('2031-10-23')], now, 'https://huishouden-home.web.app/');
+    const r = prepReminders([trash, { ...lawn, prep: { title: 'Gate', offset: { daysBefore: 0, time: '07:00' }, remind: false } }], [tick('2031-10-23')], now, 'https://huishouden-piekstra.web.app/home/');
     expect(r.map((x) => [x.title, x.body, x.at])).toEqual([['Take the garbage out', 'Garbage pickup tomorrow at 7 AM', atTime('2031-10-29', '19:00')]]);
     expect(r[0]).toMatchObject({ app: 'home', ref: 'home:prep:e1', recipients: 'all', private: false });
   });
