@@ -1,27 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
-import { deleteDoc, setDoc, writeBatch } from '@huishouden/pwa-kit/firestore';
+import { commitOps } from '@huishouden/pwa-kit/firestore';
 import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
 import { syncReminders } from '@huishouden/pwa-kit/reminders';
-import { addContact, removeContactFromApp, restoreContact, updateContact, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
+import { householdContacts, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { AGENDA_APP, APP_URL, agendaItems, jobAgenda, jobRef, screen, visitAgenda, visitRef, warrantyAgenda, warrantyRef, type AgendaEntry } from '../lib/agenda';
-import { eventAgenda, eventRef, prepAgenda, prepReminders, prepRef, withOccurrenceChange } from '../lib/events';
+import { eventAgenda, eventRef, prepAgenda, prepReminders, prepRef } from '../lib/events';
 import { APP } from '../lib/contacts';
-import { doneFromEntry, markDone, tickedTask } from '../lib/done';
-import {
-  eventDoc, prepTickDoc, prepTickId, serviceDoc, taskDoc, warrantyDoc, withoutId, type HomeEvent, type HomeTask, type PrepTick, type ServiceEntry, type Warranty,
-} from '../lib/model';
-import { DAY, toYmd } from '@huishouden/pwa-kit/time';
+import type { HomeData } from '../lib/demo';
+import type { HomeEvent, HomeTask, PrepTick, ServiceEntry, Warranty } from '../lib/model';
+import { DAY } from '@huishouden/pwa-kit/time';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { db } from './firebase';
+import { COLLECTIONS, applyOps, createActions, type Backend, type DataKey, type Op } from './actions';
 import type { HomeActions, HomeStore } from './types';
-import { track } from '@huishouden/pwa-kit/observability';
 
-const TASKS = 'homeTasks';
-const LOG = 'homeServiceLog';
-const WARRANTIES = 'homeWarranties';
-const EVENTS = 'homeEvents';
-const PREP = 'homeEventPrep';
+const { tasks: TASKS, log: LOG, warranties: WARRANTIES, events: EVENTS, prep: PREP } = COLLECTIONS;
 /** Ticks older than this are history nobody looks at: not loaded. */
 const PREP_LOAD_DAYS = 21;
 const REGULAR_URL = screen(APP_URL, 'regular');
@@ -99,163 +93,86 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
 
   const actions = useMemo<HomeActions>(() => {
     // The agenda follows each save; a failure there never fails the save (the next open repairs it).
-    const publish = (ref: string, items: AgendaEntry[]) =>
-      void replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }).catch((e) => console.warn("Couldn't update the household agenda", e));
-    const unpublish = (ref: string) => void removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch((e) => console.warn("Couldn't update the household agenda", e));
-    // An event's occurrences and its things to do before, on the agenda; and the reminders for them all.
-    const publishEvent = (event: HomeEvent, ticks = current.current.prep) => {
-      const now = Date.now();
-      publish(eventRef(event.id), eventAgenda(event, current.current.contacts, now, REGULAR_URL));
-      publish(prepRef(event.id), prepAgenda(event, ticks, now, REGULAR_URL));
-    };
-    const remind = (events: HomeEvent[], ticks: PrepTick[]) => {
-      const now = Date.now();
-      void syncReminders(db, householdId, AGENDA_APP, prepReminders(events, ticks, now, HOME_URL), me, now, { restricted }).catch((e) => console.warn("Couldn't schedule reminders", e));
-    };
-    const upsert = <T extends { id: string }>(list: T[], item: T) => [...list.filter((x) => x.id !== item.id), item];
-    const publishJob = (task: HomeTask, contacts = current.current.contacts) => publish(jobRef(task.id), jobAgenda(task, contacts, Date.now()));
-    const publishVisit = (entry: ServiceEntry, contacts = current.current.contacts) => publish(visitRef(entry.id), visitAgenda(entry, contacts, Date.now()));
-    const publishWarranty = (w: Warranty) => publish(warrantyRef(w.id), warrantyAgenda(w, Date.now()));
+    const warn = (e: unknown) => console.warn("Couldn't update the household agenda", e);
+    const publish = (ref: string, items: AgendaEntry[]) => void replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }).catch(warn);
+    const unpublish = (ref: string) => void removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch(warn);
     const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, "Couldn't save")));
-    const ref = (name: string, id?: string | null) => (id ? doc(db, base, name, id) : doc(collection(db, base, name)));
-    const stampFor = (existing?: { by: string; createdAt: number }) => {
+
+    /** A record's agenda items, by ref, in `data`: none when it isn't there. */
+    const itemsOf = (data: HomeData, col: DataKey, id: string, now: number): [string, AgendaEntry[]][] => {
+      const { contacts } = data;
+      if (col === 'tasks') {
+        const t = data.tasks.find((x) => x.id === id);
+        return [[jobRef(id), t ? jobAgenda(t, contacts, now) : []]];
+      }
+      if (col === 'log') {
+        const e = data.log.find((x) => x.id === id);
+        return [[visitRef(id), e ? visitAgenda(e, contacts, now) : []]];
+      }
+      if (col === 'warranties') {
+        const w = data.warranties.find((x) => x.id === id);
+        return [[warrantyRef(id), w ? warrantyAgenda(w, now) : []]];
+      }
+      // An event's occurrences and its things to do before; a tick changes its event's prep.
+      const eventId = col === 'events' ? id : id.slice(0, id.lastIndexOf('_'));
+      const event = data.events.find((x) => x.id === eventId);
+      return [
+        [eventRef(eventId), event ? eventAgenda(event, contacts, now, REGULAR_URL) : []],
+        [prepRef(eventId), event ? prepAgenda(event, data.prep, now, REGULAR_URL) : []],
+      ];
+    };
+
+    /**
+     * After a write: replaces the agenda items of each record it touched, removes those of deleted
+     * ones, and tops up the reminders when an event or a tick changed. Records with no items before
+     * or after are left alone.
+     */
+    const publishChanges = (before: HomeData, after: HomeData, ops: Op[]) => {
       const now = Date.now();
-      return existing ? { by: existing.by, createdAt: existing.createdAt, updatedAt: now } : { by: me, createdAt: now };
+      const done = new Set<string>();
+      for (const op of ops) {
+        const gone = (op.col === 'events' && !after.events.some((e) => e.id === op.id)) || (op.col !== 'prep' && !op.data);
+        const was = new Map(itemsOf(before, op.col, op.id, now));
+        for (const [ref, items] of itemsOf(after, op.col, op.id, now)) {
+          if (done.has(ref)) continue;
+          done.add(ref);
+          if (gone) unpublish(ref);
+          else if (items.length || was.get(ref)?.length) publish(ref, items);
+        }
+      }
+      if (ops.some((op) => op.col === 'events' || op.col === 'prep'))
+        void syncReminders(db, householdId, AGENDA_APP, prepReminders(after.events, after.prep, now, HOME_URL), me, now, { restricted }).catch((e) =>
+          console.warn("Couldn't schedule reminders", e),
+        );
     };
-    return {
-      saveTask: (id, input) => {
-        track('save job');
-        const taskRef = ref(TASKS, id);
-        const data = taskDoc(input, stampFor(current.current.tasks.find((t) => t.id === id)));
-        report(setDoc(taskRef, data));
-        publishJob({ id: taskRef.id, ...data });
+
+    const contacts = householdContacts(db, householdId, APP, me, report);
+    const backend: Backend = {
+      newId: (col) => doc(collection(db, base, COLLECTIONS[col])).id,
+      write: (ops) => {
+        report(commitOps(db, base, ops, (col) => COLLECTIONS[col]));
+        const before = current.current;
+        publishChanges(before, applyOps(before, ops), ops);
       },
-      deleteTask: (id) => {
-        report(deleteDoc(ref(TASKS, id)));
-        unpublish(jobRef(id));
+      contacts: {
+        ...contacts,
+        save: (id, input) => {
+          contacts.save(id, input);
+          if (!id) return;
+          // Jobs, visits and events name their contact on the agenda: a renamed one is republished.
+          const d = current.current;
+          const renamed = { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, name: input.name } : c)) };
+          const now = Date.now();
+          const refs = [
+            ...d.tasks.filter((t) => t.contactId === id).map((t) => itemsOf(renamed, 'tasks', t.id, now)[0]),
+            ...d.log.filter((e) => e.contactId === id).map((e) => itemsOf(renamed, 'log', e.id, now)[0]),
+            ...d.events.filter((e) => e.contactId === id).map((e) => itemsOf(renamed, 'events', e.id, now)[0]),
+          ];
+          for (const [ref, items] of refs) publish(ref, items);
+        },
       },
-      restoreTask: (t) => {
-        report(setDoc(ref(TASKS, t.id), withoutId(t)));
-        publishJob(t);
-      },
-      markDone: (task, doneOn) => {
-        track('mark job done');
-        const { due, lastDone, entry } = markDone(task, doneOn);
-        const entryRef = ref(LOG);
-        const batch = writeBatch(db);
-        const moved = tickedTask(task, { due, lastDone }, Date.now());
-        batch.set(ref(TASKS, task.id), withoutId(moved));
-        batch.set(entryRef, serviceDoc(entry, { by: me, createdAt: Date.now() }));
-        report(batch.commit());
-        publishJob(moved);
-        return { entryId: entryRef.id, next: due };
-      },
-      undoDone: (task, entryId) => {
-        const batch = writeBatch(db);
-        batch.set(ref(TASKS, task.id), withoutId(task));
-        batch.delete(ref(LOG, entryId));
-        report(batch.commit());
-        publishJob(task);
-      },
-      saveEntry: (id, input) => {
-        track('log service');
-        const existing = id ? current.current.log.find((e) => e.id === id) : undefined;
-        const data = serviceDoc(input, stampFor(existing));
-        const entryRef = ref(LOG, id);
-        const batch = writeBatch(db);
-        batch.set(entryRef, data);
-        const task = !existing && data.taskId ? current.current.tasks.find((t) => t.id === data.taskId) : undefined;
-        const moved = task ? doneFromEntry(task, data.date, toYmd(Date.now())) : null;
-        const movedTask = task && moved ? tickedTask(task, moved, Date.now()) : null;
-        if (movedTask) batch.set(ref(TASKS, movedTask.id), withoutId(movedTask));
-        report(batch.commit());
-        publishVisit({ id: entryRef.id, ...data });
-        if (movedTask) publishJob(movedTask);
-      },
-      deleteEntry: (id) => {
-        report(deleteDoc(ref(LOG, id)));
-        unpublish(visitRef(id));
-      },
-      restoreEntry: (e) => {
-        report(setDoc(ref(LOG, e.id), withoutId(e)));
-        publishVisit(e);
-      },
-      saveWarranty: (id, input) => {
-        track('save warranty');
-        const docRef = ref(WARRANTIES, id);
-        const data = warrantyDoc(input, stampFor(current.current.warranties.find((w) => w.id === id)));
-        report(setDoc(docRef, data));
-        publishWarranty({ id: docRef.id, ...data });
-      },
-      deleteWarranty: (id) => {
-        report(deleteDoc(ref(WARRANTIES, id)));
-        unpublish(warrantyRef(id));
-      },
-      restoreWarranty: (w) => {
-        report(setDoc(ref(WARRANTIES, w.id), withoutId(w)));
-        publishWarranty(w);
-      },
-      saveEvent: (id, input) => {
-        track('save regular event');
-        const eventDocRef = ref(EVENTS, id);
-        const data = eventDoc(input, stampFor(current.current.events.find((e) => e.id === id)));
-        const event = { id: eventDocRef.id, ...data };
-        report(setDoc(eventDocRef, data));
-        publishEvent(event);
-        remind(upsert(current.current.events, event), current.current.prep);
-      },
-      deleteEvent: (id) => {
-        report(deleteDoc(ref(EVENTS, id)));
-        unpublish(eventRef(id));
-        unpublish(prepRef(id));
-        remind(current.current.events.filter((e) => e.id !== id), current.current.prep);
-      },
-      restoreEvent: (e) => {
-        report(setDoc(ref(EVENTS, e.id), withoutId(e)));
-        publishEvent(e);
-        remind(upsert(current.current.events, e), current.current.prep);
-      },
-      changeOccurrence: (event, original, change) => {
-        track(change?.skipped ? 'skip occurrence' : change ? 'move occurrence' : 'restore occurrence');
-        const now = Date.now();
-        const data = eventDoc(withOccurrenceChange(event, original, change, toYmd(now)), { by: event.by, createdAt: event.createdAt, updatedAt: now });
-        const changed = { id: event.id, ...data };
-        report(setDoc(ref(EVENTS, event.id), data));
-        publishEvent(changed);
-        remind(upsert(current.current.events, changed), current.current.prep);
-      },
-      tickPrep: (event, original) => {
-        track('tick prep');
-        const id = prepTickId(event.id, original);
-        const data = prepTickDoc(me, Date.now());
-        report(setDoc(ref(PREP, id), data));
-        const ticks = upsert(current.current.prep, { id, ...data });
-        publishEvent(event, ticks);
-        remind(current.current.events, ticks);
-      },
-      untickPrep: (event, original) => {
-        const id = prepTickId(event.id, original);
-        report(deleteDoc(ref(PREP, id)));
-        const ticks = current.current.prep.filter((t) => t.id !== id);
-        publishEvent(event, ticks);
-        remind(current.current.events, ticks);
-      },
-      saveContact: (id, input) => {
-        report(id ? updateContact(db, householdId, id, input, me) : addContact(db, householdId, input, me));
-        if (!id) return;
-        // Jobs and visits name their contact on the agenda: a renamed one is republished.
-        const contacts = current.current.contacts.map((c) => (c.id === id ? { ...c, name: input.name } : c));
-        current.current.tasks.filter((t) => t.contactId === id).forEach((t) => publishJob(t, contacts));
-        current.current.log.filter((e) => e.contactId === id).forEach((e) => publishVisit(e, contacts));
-        current.current.events.filter((e) => e.contactId === id).forEach((e) => publish(eventRef(e.id), eventAgenda(e, contacts, Date.now(), REGULAR_URL)));
-      },
-      deleteContact: (id) => {
-        const c = current.current.contacts.find((x) => x.id === id);
-        // A contact other apps also show stays for them; Home only stops showing it.
-        if (c) report(removeContactFromApp(db, householdId, c, APP, me));
-      },
-      restoreContact: (c) => report(restoreContact(db, householdId, c)),
     };
+    return createActions(backend, () => current.current, me, () => Date.now());
   }, [base, householdId, me, restricted]);
 
   return { data: { tasks, log, warranties, contacts, events, prep }, ready, actions, me };
