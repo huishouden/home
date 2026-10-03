@@ -5,7 +5,7 @@ import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, Warra
 import { CalendarSync } from 'lucide-react';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
-import { isImported, type CalendarMatch } from '@huishouden/pwa-kit/calendar';
+import { isImported, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { clockWords } from '@huishouden/pwa-kit/time';
 import { describeRule, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import { SuggestionsCard } from '@huishouden/pwa-kit/react/suggestions';
@@ -21,7 +21,7 @@ import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
 import { EventDialog } from './components/EventDialog';
 import { OccurrenceDialog } from './components/OccurrenceDialog';
-import { fromSeries, hasEventNamed, prepTasks, splitRegular, type PrepTask } from './lib/events';
+import { fromSeries, hasEventNamed, prepTasks, splitRegular, type PrepOffer, type PrepTask } from './lib/events';
 import { APP, ROLES } from './lib/contacts';
 import { CALENDAR_WORDS, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
@@ -57,6 +57,9 @@ const TABS: Tab[] = [
   { id: 'contacts', label: 'Contacts' },
 ];
 
+/** A "Looks regular" offer: a new regular event, or (with `prep`) the thing to do before one the household has. */
+type RegularOffer = { series: CalendarSeries; prep?: PrepOffer };
+
 type Editing<T> = { item: T | null; initial?: Partial<ServiceInput> } | null;
 
 /** Everything inside the frame once there is data to show (live or sample). */
@@ -81,8 +84,10 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     app: 'Home',
     limit: 50,
   });
-  // Garbage, recycling and lawn events that repeat are offered as one regular event; the rest as visits.
-  const { offers, visits } = splitRegular(suggested.suggestions, data.events);
+  // Garbage, recycling and lawn events that repeat are offered as one regular event, a reminder
+  // before one the household has as its thing to do before; the rest as visits.
+  const { offers, prepOffers, visits } = splitRegular(suggested.suggestions, data.events);
+  const regularOffers: RegularOffer[] = [...prepOffers.map((p) => ({ series: p.series, prep: p })), ...offers.map((series) => ({ series }))];
   const prep = prepTasks(data.events, data.prep, now);
 
   /** Ticks the thing to do before off, or (when done) undoes it; a tick comes with Undo. */
@@ -189,16 +194,17 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         {tab === 'overview' && store.ready && (
           <>
             <SuggestionsCard
-              suggestions={offers}
-              idOf={(o) => o.key}
-              titleOf={(o) => o.title}
-              detailOf={(o) => `${describeRule(o.rule)}${o.time ? ` at ${clockWords(o.time)}` : ''}`}
+              suggestions={regularOffers}
+              idOf={(o) => o.series.key}
+              titleOf={(o) => o.series.title}
+              detailOf={({ series: s, prep: p }) => `${describeRule(s.rule)}${s.time ? ` at ${clockWords(s.time)}` : ''}${p ? ` · before ${p.event.title}` : ''}`}
               lead="Looks regular"
               label="Regular events in your calendar"
               moreLabel="More regular events in your calendar"
               icon={<CalendarSync size={20} className="shrink-0 text-forest-700" aria-hidden="true" />}
-              onAdd={(o) => setRegular({ item: null, initial: fromSeries(o) })}
-              onDismiss={(o) => o.matches.forEach(suggested.dismiss)}
+              addAs={({ series: s, prep: p }) => (p ? { label: 'Use as prep', ariaLabel: `Use ${s.title} as prep for ${p.event.title}` } : null)}
+              onAdd={({ series: s, prep: p }) => setRegular(p ? { item: p.event, initial: { prep: p.prep } } : { item: null, initial: fromSeries(s) })}
+              onDismiss={(o) => o.series.matches.forEach(suggested.dismiss)}
             />
             <CalendarSuggestions suggestions={visits} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
           </>
@@ -283,6 +289,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           onSave={(input) => {
             actions.saveEvent(regular.item?.id ?? null, input);
             if (!regular.item) notify(`Added ${input.title.trim()}`);
+            else if (regular.initial?.prep && input.prep) notify(`${input.prep.title.trim()} before ${input.title.trim()}`);
           }}
           onDelete={
             regular.item

@@ -52,29 +52,33 @@ export function mockCalendar(events: CalendarMatch[]) {
   (window as unknown as { __mockCalendarEvents: CalendarMatch[] }).__mockCalendarEvents = events;
 }
 
-/** A garbage pickup that repeats every Thursday at 7 AM, and a one-off lawn visit: the first is offered as a regular event. */
+const series = (key: string, title: string, days: [number, number][], h: number): CalendarMatch[] =>
+  days.map(([month, day]) => ({
+    id: `${key}-${month}-${day}`,
+    title,
+    start: at(month, day, h, 0),
+    allDay: false,
+    location: '',
+    description: '',
+    link: `https://calendar.example.com/event?eid=${key}-${month}-${day}`,
+    calendarName: 'Family',
+    recurringEventId: key,
+  }));
+
+/**
+ * A garbage pickup that repeats every Tuesday at 7 AM (the sample house's garbage goes on
+ * Thursdays, so this one is new), and a one-off lawn visit: the first is offered as a regular event.
+ */
 export const repeatingEvents: CalendarMatch[] = [
-  ...[23, 30].map((day) => ({
-    id: `evt-trash-${day}`,
-    title: 'Trash day',
-    start: at(10, day, 7, 0),
-    allDay: false,
-    location: '',
-    description: '',
-    link: `https://calendar.example.com/event?eid=evt-trash-${day}`,
-    calendarName: 'Family',
-    recurringEventId: 'evt-trash',
-  })),
-  ...[6, 13].map((day) => ({
-    id: `evt-trash-n${day}`,
-    title: 'Trash day',
-    start: at(11, day, 7, 0),
-    allDay: false,
-    location: '',
-    description: '',
-    link: `https://calendar.example.com/event?eid=evt-trash-n${day}`,
-    calendarName: 'Family',
-    recurringEventId: 'evt-trash',
-  })),
+  ...series('evt-trash', 'Trash day', [[10, 21], [10, 28], [11, 4], [11, 11]], 7),
   calendarEvents[1],
+];
+
+/**
+ * Reminders the evening before the sample house's pickups: garbage (which already has its thing to
+ * do before) every Wednesday, recycling (which has none) every other Wednesday.
+ */
+export const reminderEvents: CalendarMatch[] = [
+  ...series('evt-garbage-out', 'Garbage out for Thursday Pickup', [[10, 22], [10, 29], [11, 5]], 20),
+  ...series('evt-recycling-out', 'Recycling out for Thursday pickup', [[10, 29], [11, 12]], 20),
 ];
