@@ -28,14 +28,14 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
   return (
     <div className="mx-auto max-w-4xl space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h2 className="text-2xl font-semibold text-stone-800">Regular events</h2>
+        <h2 className="text-2xl font-semibold text-ink">Regular events</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
           <Plus size={20} /> Add event
         </button>
       </div>
       {store.helping && <RoleNote action="edit-others" />}
       {events.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-stone-600`}>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>
           Nothing regular yet. Add garbage and recycling pickup, the lawn service or the HOA meeting, with what to do the night before.
         </p>
       )}
@@ -45,18 +45,18 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
             const contact = e.contactId ? contacts.find((c) => c.id === e.contactId) : undefined;
             const list = occurrencesOf(e, today, addDays(today, 400), true).slice(0, SHOWN);
             return (
-              <li key={e.id} className="flex items-start gap-4 border-b border-stone-200 p-4 last:border-b-0 sm:p-5" aria-label={e.title}>
+              <li key={e.id} className="flex items-start gap-4 border-b border-line p-4 last:border-b-0 sm:p-5" aria-label={e.title}>
                 <EventTile kind={e.kind} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-xl font-semibold text-stone-800">{e.title}</p>
-                      <p className="text-base text-stone-600">
+                      <p className="text-xl font-semibold text-ink">{e.title}</p>
+                      <p className="text-base text-muted">
                         {describeRule(e.rule)}
                         {e.time ? ` at ${clockWords(e.time)}` : ''}
                       </p>
                       {e.prep && (
-                        <p className="text-base text-stone-600">
+                        <p className="text-base text-muted">
                           {e.prep.title}: {describePrep(e.prep.offset).replace(/^./, (c) => c.toLowerCase())}
                         </p>
                       )}
@@ -69,14 +69,14 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
                     )}
                   </div>
                   <ul className="mt-2 flex flex-wrap gap-2" aria-label={`Next: ${e.title}`}>
-                    {list.length === 0 && <li className="text-base text-stone-600">No more dates.</li>}
+                    {list.length === 0 && <li className="text-base text-muted">No more dates.</li>}
                     {list.map((o) => (
                       <li key={o.original}>
                         <button
                           type="button"
                           onClick={() => onOpen(e, o)}
                           className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors duration-150 hover:border-forest-400 ${
-                            o.skipped ? 'border-stone-200 bg-stone-50 text-stone-600 line-through' : o.moved ? 'border-forest-200 bg-forest-50 text-forest-700' : 'border-stone-200 bg-white text-stone-700'
+                            o.skipped ? 'border-line bg-sunken text-muted line-through' : o.moved ? 'border-forest-200 bg-tint dark:border-forest-600 text-link' : 'border-line bg-surface text-ink-soft'
                           }`}
                           aria-label={`${e.title}, ${occurrenceWords(o, today)}${o.skipped ? ', skipped' : o.moved ? `, moved from ${fromWords(o.original, today)}` : ''}`}
                         >

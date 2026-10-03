@@ -43,7 +43,7 @@ test('a thing to do before turns terracotta once late, and says missed after the
   await expect(gate).toContainText('tonight by 7 PM');
   await page.clock.fastForward('09:30:00');
   await expect(gate).toContainText('was due tonight by 7 PM');
-  await expect(gate.locator('.text-terracotta-dark').first()).toBeVisible();
+  await expect(gate.locator('.text-attention').first()).toBeVisible();
   await page.clock.fastForward('13:30:00');
   await expect(gate).toContainText('Missed: lawn service was at 9 AM');
 });

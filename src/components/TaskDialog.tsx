@@ -150,8 +150,8 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
           </select>
         </Field>
 
-        <fieldset className="space-y-3 rounded-2xl border border-stone-200 p-4">
-          <legend className="px-1 text-sm font-medium text-stone-700">Repeats</legend>
+        <fieldset className="space-y-3 rounded-2xl border border-line p-4">
+          <legend className="px-1 text-sm font-medium text-ink-soft">Repeats</legend>
           <div className="flex flex-wrap gap-2">
             <Chip
               active={kind === 'after-done'}
@@ -174,7 +174,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
             </Chip>
           </div>
           <div className="flex items-end gap-2">
-            <span className="pb-3 text-base text-stone-700">Every</span>
+            <span className="pb-3 text-base text-ink-soft">Every</span>
             <label className="w-20">
               <span className="sr-only">How many</span>
               <input
@@ -222,8 +222,8 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
           )}
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-2xl border border-stone-200 p-4">
-          <legend className="px-1 text-sm font-medium text-stone-700">When was it last done?</legend>
+        <fieldset className="space-y-3 rounded-2xl border border-line p-4">
+          <legend className="px-1 text-sm font-medium text-ink-soft">When was it last done?</legend>
           <div className="flex flex-wrap gap-2">
             {lastDoneChoices(kind).map((c) => (
               <Chip key={c.value} active={choice === c.value || (c.value === 'not-yet' && choice === 'overdue' && kind === 'after-done')} onClick={() => answer(c.value)}>

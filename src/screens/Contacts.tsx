@@ -18,14 +18,14 @@ export function Contacts({ store, onAdd, onEdit, notify }: {
   return (
     <div className="space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-stone-800">Contacts</h2>
+        <h2 className="text-2xl font-semibold text-ink">Contacts</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
           <UserPlus size={20} /> Add contact
         </button>
       </div>
       {store.helping && <RoleNote action="edit-others" />}
       {groups.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-stone-600`}>No service providers yet. Add the lawn service, pest control and plumber so their numbers are one tap away.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>No service providers yet. Add the lawn service, pest control and plumber so their numbers are one tap away.</p>
       )}
       <div className="grid items-start gap-6 md:grid-cols-2">
         {groups.flatMap((g) =>

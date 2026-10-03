@@ -7,6 +7,7 @@ import {
   expectHuishoudenFrame,
   expectInstallable,
   expectSecurityHeaders,
+  expectThemeConsistent,
 } from '@huishouden/pwa-kit/e2e';
 
 test('loads without runtime errors and shows the sample house', async ({ page }) => {
@@ -17,6 +18,8 @@ test('loads without runtime errors and shows the sample house', async ({ page })
 });
 
 test('is installable', ({ page, request }) => expectInstallable(page, request));
+
+test('follows the suite theme: dark on a dark device, readable', ({ page }) => expectThemeConsistent(page, { path: './' }));
 
 test('Google sign-in popup reaches Google with an allowed redirect URI', ({ page, context }) =>
   expectGoogleSignInPopup(page, context, async (p) => {
