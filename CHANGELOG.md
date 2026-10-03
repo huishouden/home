@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/huishouden/home/compare/v1.6.0...v1.7.0) (2026-10-03)
+
+
+### Features
+
+* Home moves to /home/ on the suite's one site (pwa-kit 0.48.0) ([#26](https://github.com/huishouden/home/issues/26)) ([5a0c8de](https://github.com/huishouden/home/commit/5a0c8ded51f1e0dcba5fefe92ce90af6cd1ad1e2))
+
 ## [1.6.0](https://github.com/huishouden/home/compare/v1.5.0...v1.6.0) (2026-10-03)
 
 
