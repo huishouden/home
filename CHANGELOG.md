@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/huishouden/home/compare/v1.7.0...v1.7.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* calendar suggestions skip a series an existing regular event covers; a reminder becomes its prep (pwa-kit 0.50.0) ([#28](https://github.com/huishouden/home/issues/28)) ([0162374](https://github.com/huishouden/home/commit/01623749f7982a5b062313fdf97d64d712c3692a))
+
 ## [1.7.0](https://github.com/huishouden/home/compare/v1.6.0...v1.7.0) (2026-10-03)
 
 
