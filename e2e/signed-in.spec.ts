@@ -207,7 +207,10 @@ test('a job due today is on the portal’s To-do list, and Done there moves it o
     }
     await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
     const job = page.getByRole('listitem', { name: title, exact: true });
-    await job.getByRole('button', { name: title, exact: true }).click({ timeout: 20_000 });
+    if (!(await job.waitFor({ timeout: 20_000 }).then(() => true, () => false))) {
+      console.log(`cleanup: ${title} not on Upkeep at ${page.url()}:\n${(await page.locator('main').innerText()).slice(0, 3000)}`);
+    }
+    await job.getByRole('button', { name: title, exact: true }).click({ timeout: 5_000 });
     await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Delete' }).click();
     await expect(job).toHaveCount(0);
   }
