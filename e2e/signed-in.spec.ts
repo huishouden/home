@@ -166,6 +166,16 @@ test('a job due today is on the portal’s To-do list, and Done there moves it o
   const title = `Descale the kettle ${Date.now().toString(36)}`;
   await signInTestUser(page, { email: 'test-a@example.com' });
   await page.getByRole('button', { name: 'Upkeep', exact: true }).click({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Upkeep' })).toBeVisible();
+  // A run cut short leaves its job behind: clear those first.
+  const leftover = page.getByRole('listitem', { name: /^Descale the kettle / });
+  await page.waitForTimeout(3_000);
+  while ((await leftover.count()) > 0) {
+    const name = await leftover.first().getAttribute('aria-label');
+    await page.getByRole('button', { name: `Edit ${name}` }).click();
+    await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('listitem', { name: name!, exact: true })).toHaveCount(0);
+  }
   await page.getByRole('button', { name: 'Add job' }).click();
   const dialog = page.getByRole('dialog', { name: 'New upkeep job' });
   await dialog.getByLabel('What').fill(title);
