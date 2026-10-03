@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/huishouden/home/compare/v1.8.0...v1.9.0) (2026-10-03)
+
+
+### Features
+
+* publish due jobs and prep to the household to-do list; pause jobs, skip prep ([#34](https://github.com/huishouden/home/issues/34)) ([e1c3808](https://github.com/huishouden/home/commit/e1c3808d780477b70fb4c130dab359f673ba5fa0))
+
 ## [1.8.0](https://github.com/huishouden/home/compare/v1.7.2...v1.8.0) (2026-10-03)
 
 
