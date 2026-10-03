@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { CATEGORIES, CATEGORY_LABELS, LIMITS, type Category, type HomeTask, type TaskInput } from '../lib/model';
-import { MAX_EVERY, UNITS, describeSchedule, firstDue, occurrenceOnOrAfter, type Schedule, type Unit } from '@huishouden/pwa-kit/schedule';
+import { MAX_EVERY, UNITS, describeSchedule, dueFromLastDone, type Schedule, type Unit } from '@huishouden/pwa-kit/schedule';
 import { guessCategory } from '../lib/calendarImport';
+import { initialLastDone, lastDoneChoices, savedLastDone, toLastDone, type LastDoneChoice } from '../lib/lastDone';
+import { dueText } from '../lib/upkeep';
 import { isYmd, longDate, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
 import { ContactSelect, DeleteButton } from './bits';
@@ -11,10 +13,11 @@ import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@hu
 
 const UNIT_LABELS: Record<Unit, [string, string]> = { day: ['day', 'days'], week: ['week', 'weeks'], month: ['month', 'months'], year: ['year', 'years'] };
 
-const sameSchedule = (a: Schedule, b: Schedule) =>
-  a.kind === b.kind && a.every === b.every && a.unit === b.unit && (a.kind !== 'fixed' || (b.kind === 'fixed' && a.anchor === b.anchor));
-
-/** Add or edit a recurring upkeep job: what, how often, when next, who does it. */
+/**
+ * Add or edit a recurring upkeep job: what, how often, when it was last done, when next, who does
+ * it. A new job is not assumed done: "Not done yet" makes it due now. Next due follows the answer
+ * live and can be set by hand; an existing job keeps its dates until either is changed.
+ */
 export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, onDelete, onClose }: {
   task: HomeTask | null;
   today: Ymd;
@@ -32,28 +35,30 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
   const [every, setEvery] = useState(String(s?.every ?? 3));
   const [unit, setUnit] = useState<Unit>(s?.unit ?? 'month');
   const [anchor, setAnchor] = useState<Ymd>(s?.kind === 'fixed' ? s.anchor : (task?.due ?? today));
-  const [due, setDue] = useState<Ymd>(task?.due ?? today);
-  const [lastDone, setLastDone] = useState<Ymd>(task?.lastDone ?? '');
+  const initial = initialLastDone(task?.lastDone, today);
+  const [choice, setChoice] = useState<LastDoneChoice>(initial.choice);
+  const [doneOn, setDoneOn] = useState<Ymd | ''>(initial.on);
+  // A date set by hand (or the job's saved one), until the answer or the schedule changes it.
+  const [dueSet, setDueSet] = useState<Ymd | null>(task?.due ?? null);
   const [contactId, setContactId] = useState(task?.contactId ?? '');
   const [notes, setNotes] = useState(task?.notes ?? '');
   const [event, setEvent] = useState(task?.calendarEventId || task?.calendarLink ? { id: task.calendarEventId, link: task.calendarLink } : null);
 
   const n = Number(every);
   const everyOk = Number.isInteger(n) && n >= 1 && n <= MAX_EVERY;
-  const schedule: Schedule | null = !everyOk ? null : kind === 'fixed' ? { kind, every: n, unit, anchor } : { kind, every: n, unit };
-  // Fixed dates follow from the schedule; an unchanged schedule keeps its current (maybe overdue) date.
-  const nextDue: Ymd | null = !schedule
-    ? null
-    : schedule.kind === 'fixed'
-      ? isYmd(anchor)
-        ? task && sameSchedule(task.schedule, schedule)
-          ? task.due
-          : occurrenceOnOrAfter(schedule, today)
-        : null
-      : isYmd(due)
-        ? due
-        : null;
-  const valid = title.trim().length > 0 && !!schedule && !!nextDue;
+  const schedule: Schedule | null = !everyOk ? null : kind === 'fixed' ? (isYmd(anchor) ? { kind, every: n, unit, anchor } : null) : { kind, every: n, unit };
+  const last = toLastDone(choice, doneOn, today, kind);
+  const nextDue: Ymd | null = dueSet && isYmd(dueSet) ? dueSet : schedule && last ? dueFromLastDone(schedule, today, last) : null;
+  const valid = title.trim().length > 0 && !!schedule && !!nextDue && (choice !== 'date' || !!last);
+
+  // A new schedule moves the date when it depends on it: set dates, or a day it was done.
+  const rescheduled = (nextKind = kind) => {
+    if (nextKind === 'fixed' || choice === 'today' || choice === 'date') setDueSet(null);
+  };
+  const answer = (c: LastDoneChoice) => {
+    setChoice(c);
+    setDueSet(null);
+  };
 
   const save = () => {
     if (!valid || !schedule || !nextDue) return;
@@ -62,20 +67,13 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
       category,
       schedule,
       due: nextDue,
-      lastDone: isYmd(lastDone) ? lastDone : undefined,
+      lastDone: savedLastDone(last),
       contactId: contactId || undefined,
       notes,
       calendarEventId: event?.id,
       calendarLink: event?.link,
     });
     onClose();
-  };
-
-  // A new after-done job with a last-done day starts one interval later, until a date is picked.
-  const suggestDue = (last: Ymd, e = every, u = unit) => {
-    const count = Number(e);
-    if (task || kind !== 'after-done' || !Number.isInteger(count) || count < 1) return;
-    setDue(firstDue({ kind: 'after-done', every: count, unit: u }, today, isYmd(last) ? last : undefined));
   };
 
   return (
@@ -140,10 +138,23 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
         <fieldset className="space-y-3 rounded-2xl border border-stone-200 p-4">
           <legend className="px-1 text-sm font-medium text-stone-700">Repeats</legend>
           <div className="flex flex-wrap gap-2">
-            <Chip active={kind === 'after-done'} onClick={() => setKind('after-done')}>
+            <Chip
+              active={kind === 'after-done'}
+              onClick={() => {
+                setKind('after-done');
+                if (choice === 'overdue') setChoice('not-yet');
+                rescheduled('after-done');
+              }}
+            >
               Counted from when it's done
             </Chip>
-            <Chip active={kind === 'fixed'} onClick={() => setKind('fixed')}>
+            <Chip
+              active={kind === 'fixed'}
+              onClick={() => {
+                setKind('fixed');
+                rescheduled('fixed');
+              }}
+            >
               On set dates
             </Chip>
           </div>
@@ -158,7 +169,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
                 aria-label="How many"
                 onChange={(e) => {
                   setEvery(e.target.value.replace(/\D/g, '').slice(0, 2));
-                  suggestDue(lastDone, e.target.value, unit);
+                  rescheduled();
                 }}
               />
             </label>
@@ -170,7 +181,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
                 aria-label="Unit"
                 onChange={(e) => {
                   setUnit(e.target.value as Unit);
-                  suggestDue(lastDone, every, e.target.value as Unit);
+                  rescheduled();
                 }}
               >
                 {UNITS.map((u) => (
@@ -181,15 +192,56 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
               </select>
             </label>
           </div>
-          {kind === 'fixed' ? (
-            <Field label="Starting on" hint={schedule && nextDue ? `${describeSchedule(schedule)}. Next due ${longDate(nextDue, today)}.` : undefined}>
-              <input className={inputClass} type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} />
-            </Field>
-          ) : (
-            <Field label="Next due" hint="After that, it counts from the day it is marked done.">
-              <input className={inputClass} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+          {kind === 'fixed' && (
+            <Field label="Starting on" hint={schedule ? `${describeSchedule(schedule)}.` : undefined}>
+              <input
+                className={inputClass}
+                type="date"
+                value={anchor}
+                onChange={(e) => {
+                  setAnchor(e.target.value);
+                  rescheduled();
+                }}
+              />
             </Field>
           )}
+        </fieldset>
+
+        <fieldset className="space-y-3 rounded-2xl border border-stone-200 p-4">
+          <legend className="px-1 text-sm font-medium text-stone-700">When was it last done?</legend>
+          <div className="flex flex-wrap gap-2">
+            {lastDoneChoices(kind).map((c) => (
+              <Chip key={c.value} active={choice === c.value || (c.value === 'not-yet' && choice === 'overdue' && kind === 'after-done')} onClick={() => answer(c.value)}>
+                {c.label}
+              </Chip>
+            ))}
+          </div>
+          {choice === 'date' && (
+            <Field label="Last done">
+              <input
+                className={inputClass}
+                type="date"
+                value={doneOn}
+                max={today}
+                onChange={(e) => {
+                  setDoneOn(e.target.value);
+                  setDueSet(null);
+                }}
+              />
+            </Field>
+          )}
+          <Field
+            label="Next due"
+            hint={
+              nextDue
+                ? `${dueText(nextDue, today)}, ${longDate(nextDue, today)}.${kind === 'after-done' ? ' After that, it counts from the day it is marked done.' : ''}`
+                : choice === 'date'
+                  ? 'Pick the day it was last done.'
+                  : undefined
+            }
+          >
+            <input className={inputClass} type="date" value={nextDue ?? ''} onChange={(e) => setDueSet(e.target.value || null)} />
+          </Field>
         </fieldset>
 
         <CalendarFind
@@ -199,25 +251,15 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
           available={calendarAvailable}
           onPick={(m) => {
             const day = toYmd(m.start);
-            if (kind === 'fixed') setAnchor(day);
-            else setDue(day);
+            if (kind === 'fixed') {
+              setAnchor(day);
+              setDueSet(null);
+            } else setDueSet(day);
             setEvent({ id: m.id, link: m.link });
           }}
         />
         {event && <LinkedEvent link={event.link} onUnlink={() => setEvent(null)} />}
 
-        <Field label="Last done (optional)">
-          <input
-            className={inputClass}
-            type="date"
-            value={lastDone}
-            max={today}
-            onChange={(e) => {
-              setLastDone(e.target.value);
-              suggestDue(e.target.value);
-            }}
-          />
-        </Field>
         {(contacts.length > 0 || contactId) && (
           <Field label="Who does it (optional)">
             <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} empty="We do it ourselves" />
