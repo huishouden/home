@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
 import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
-import { CalendarSync } from 'lucide-react';
+import { CalendarSync, Contact as ContactIcon, History as HistoryIcon, House, Repeat, ShieldCheck, Wrench } from 'lucide-react';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import { isImported, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
@@ -48,13 +48,14 @@ interface Props {
   role?: RoleState;
 }
 
+// On phones the four primaries sit in the bottom bar; Warranties and Contacts are under More.
 const TABS: Tab[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'upkeep', label: 'Upkeep' },
-  { id: 'regular', label: 'Regular' },
-  { id: 'history', label: 'History' },
-  { id: 'warranties', label: 'Warranties' },
-  { id: 'contacts', label: 'Contacts' },
+  { id: 'overview', label: 'Overview', icon: House, primary: true },
+  { id: 'upkeep', label: 'Upkeep', icon: Wrench, primary: true },
+  { id: 'regular', label: 'Regular', icon: Repeat, primary: true },
+  { id: 'history', label: 'History', icon: HistoryIcon, primary: true },
+  { id: 'warranties', label: 'Warranties', icon: ShieldCheck },
+  { id: 'contacts', label: 'Contacts', icon: ContactIcon },
 ];
 
 /** A "Looks regular" offer: a new regular event, or (with `prep`) the thing to do before one the household has. */

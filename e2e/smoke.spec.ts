@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   expectCleanLoad,
+  expectBottomNav,
   expectCompactSampleBanner,
   expectGoogleSignInPopup,
   expectHuishoudenFrame,
@@ -33,3 +34,6 @@ test('link previews describe the app and show its image', async ({ page, request
 test('sends the security headers and leaves sign-in un-framed', ({ request }) => expectSecurityHeaders(request, './', { camera: true }));
 
 test('the Sample data banner is one line on a phone', ({ page }) => expectCompactSampleBanner(page, './'));
+
+test('on a phone the sections are a bottom bar, with Warranties and Contacts under More', ({ page }) =>
+  expectBottomNav(page, { path: './', labels: ['Overview', 'Upkeep', 'Regular', 'History', 'More'], more: ['Warranties', 'Contacts'] }));
