@@ -22,6 +22,8 @@ export default defineConfig({
       shortName: 'Home',
       description: "Keeping the house in good shape",
       url: 'https://huishouden-home.web.app',
+      // Contacts → Share → Home on Android: a provider's contact card becomes a contact.
+      shareTarget: { contacts: true },
       themeColor: '#1b4332',
       backgroundColor: '#faf9f5',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],

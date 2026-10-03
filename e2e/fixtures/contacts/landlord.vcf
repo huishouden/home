@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//Apple Inc.//iPhone OS 17.5//EN
+N:Example;Jordan;;;
+FN:Jordan Example
+ORG:Example Property Management;
+item1.TEL;type=pref:(555) 010-0142
+item1.X-ABLabel:_$!<Mobile>!$_
+TEL;type=WORK;type=VOICE:(555) 010-0143
+item2.EMAIL;type=INTERNET;type=pref:jordan@example.com
+item3.ADR;type=WORK;type=pref:;;12 Example Street\nSuite 3;Springfield;IL;62704;United States
+NOTE:Rent due on the 1st.
+PHOTO;ENCODING=b;TYPE=JPEG:/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a
+ HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIy
+END:VCARD

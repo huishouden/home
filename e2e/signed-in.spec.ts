@@ -123,3 +123,39 @@ test('a helper ticks off the thing to do before a regular event, and a member se
     await member.close();
   }
 });
+
+test('a landlord imported from a contact card is saved for the household', async ({ page, browser }) => {
+  const name = `Jordan Example ${Date.now().toString(36)}`;
+  await signInTestUser(page, { email: 'test-a@example.com' });
+  await page.getByRole('button', { name: 'Contacts', exact: true }).click({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Add contact' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New contact' });
+  // Signed in, Google Contacts is offered too.
+  await expect(dialog.getByRole('button', { name: 'Find in my Google Contacts' })).toBeVisible();
+  const chooser = page.waitForEvent('filechooser');
+  await dialog.getByRole('button', { name: 'Import a contact card' }).click();
+  await (await chooser).setFiles(new URL('./fixtures/contacts/landlord.vcf', import.meta.url).pathname);
+  await expect(dialog.getByLabel('Phone', { exact: true })).toHaveValue('(555) 010-0142');
+  // Other runs share the household: a name of this run's own.
+  await dialog.getByLabel('Name', { exact: true }).fill(name);
+  await dialog.getByRole('button', { name: 'Landlord' }).click();
+  await dialog.getByRole('button', { name: 'Save' }).click();
+
+  try {
+    const other = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+    try {
+      const theirs = await other.newPage();
+      await signInTestUser(theirs, { email: 'test-b@example.com' });
+      await theirs.getByRole('button', { name: 'Contacts', exact: true }).click({ timeout: 20_000 });
+      const card = theirs.getByRole('region', { name });
+      await expect(card).toContainText('Landlord', { timeout: 20_000 });
+      await expect(card.getByRole('link', { name: `Call ${name}, (555) 010-0142` })).toBeVisible();
+      await expect(card).toContainText('Rent due on the 1st.');
+    } finally {
+      await other.close();
+    }
+  } finally {
+    await page.getByRole('button', { name: `Delete ${name}` }).click();
+    await expect(page.getByRole('region', { name })).toHaveCount(0);
+  }
+});

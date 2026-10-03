@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Riley Sample
+N:Sample;Riley;;;
+TEL;TYPE=CELL:555-010-0161
+item1.ORG:Example Realty
+CATEGORIES:myContacts
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Example Lawn Co.
+ORG:Example Lawn Co.
+TEL;TYPE=WORK:555-010-0162
+CATEGORIES:myContacts
+END:VCARD
