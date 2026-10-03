@@ -206,8 +206,9 @@ test('a job due today is on the portal’s To-do list, and Done there moves it o
       await expect(entry).toHaveCount(0);
     }
     await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
-    await page.getByRole('button', { name: `Edit ${title}` }).click();
+    const job = page.getByRole('listitem', { name: title, exact: true });
+    await job.getByRole('button', { name: title, exact: true }).click({ timeout: 20_000 });
     await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByRole('listitem', { name: title })).toHaveCount(0);
+    await expect(job).toHaveCount(0);
   }
 });
