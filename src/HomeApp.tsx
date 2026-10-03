@@ -65,7 +65,7 @@ type Editing<T> = { item: T | null; initial?: Partial<ServiceInput> } | null;
 
 /** Everything inside the frame once there is data to show (live or sample). */
 export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, role }: Props) {
-  const { now } = useClock();
+  const { now, read } = useClock();
   const today = toYmd(now);
   // Agenda links open a screen: #upkeep, #history, #warranties.
   const [tab, setTab] = useState<TabId>(() => tabFromHash(window.location.hash));
@@ -141,8 +141,9 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
       mayChange(store, item) ? show(item) : notify(refusal('edit-others'));
 
   const markDone = (t: HomeTask) => {
-    const { entryId, next } = actions.markDone(t, today);
-    notify(`Done: ${t.title}. Next due ${shortDate(next, today)}.`, () => actions.undoDone(t, entryId));
+    const doneOn = toYmd(read());
+    const { entryId, next } = actions.markDone(t, doneOn);
+    notify(`Done: ${t.title}. Next due ${shortDate(next, doneOn)}.`, () => actions.undoDone(t, entryId));
   };
 
   const resumeTask = (t: HomeTask) => {

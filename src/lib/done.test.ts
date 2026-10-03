@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { TICK_FIELDS, doneFromEntry, markDone, resumedDue, tickedTask } from './done';
 import { mayChange } from '../data/types';
 import type { HomeTask } from './model';
+import { daysBetween } from '@huishouden/pwa-kit/time';
 
 const filter: HomeTask = {
   id: 't1',
@@ -21,6 +22,13 @@ test('done rolls the schedule forward and records history', () => {
     lastDone: '2031-10-16',
     entry: { date: '2031-10-16', title: 'Change HVAC filter', taskId: 't1', contactId: 'c1' },
   });
+});
+
+test('a set-dates job three dates overdue, marked done, is next due after today', () => {
+  const monthly = { kind: 'fixed', every: 1, unit: 'month', anchor: '2031-01-01' } as const;
+  const { due } = markDone({ ...filter, schedule: monthly, due: '2031-07-01' }, '2031-10-16');
+  expect(due).toBe('2031-11-01');
+  expect(daysBetween('2031-10-16', due)).toBeGreaterThan(0);
 });
 
 test('a past entry newer than the last time moves the job; booked or older ones do not', () => {
