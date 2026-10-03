@@ -1,5 +1,5 @@
 import type { HomeTask, ServiceInput } from './model';
-import { nextDueAfterDone } from '@huishouden/pwa-kit/schedule';
+import { firstDue, nextDueAfterDone } from '@huishouden/pwa-kit/schedule';
 import { daysBetween, type Ymd } from '@huishouden/pwa-kit/time';
 
 /** What marking a job done writes: the job's new due date and last-done day, and a history entry. */
@@ -31,4 +31,13 @@ export const TICK_FIELDS = ['due', 'lastDone', 'updatedAt'] as const;
 /** The job as it is after being done on a day: only the tick fields change, `by` stays its author. */
 export function tickedTask(task: HomeTask, done: { due: Ymd; lastDone: Ymd }, now: number): HomeTask {
   return { ...task, due: done.due, lastDone: done.lastDone, updatedAt: now };
+}
+
+/**
+ * Where a resumed job is due: its due date when that is still ahead, otherwise now (after-done) or
+ * the schedule's next date from today (set dates), so a long pause doesn't come back as overdue.
+ */
+export function resumedDue(task: Pick<HomeTask, 'schedule' | 'due'>, today: Ymd): Ymd {
+  if (daysBetween(today, task.due) >= 0) return task.due;
+  return task.schedule.kind === 'fixed' ? firstDue(task.schedule, today) : today;
 }

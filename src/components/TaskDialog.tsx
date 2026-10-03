@@ -9,7 +9,8 @@ import { isYmd, longDate, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
 import { ContactSelect, DeleteButton } from './bits';
 import { auth } from '../data/firebase';
-import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { Pause } from 'lucide-react';
 
 const UNIT_LABELS: Record<Unit, [string, string]> = { day: ['day', 'days'], week: ['week', 'weeks'], month: ['month', 'months'], year: ['year', 'years'] };
 
@@ -18,13 +19,15 @@ const UNIT_LABELS: Record<Unit, [string, string]> = { day: ['day', 'days'], week
  * it. A new job is not assumed done: "Not done yet" makes it due now. Next due follows the answer
  * live and can be set by hand; an existing job keeps its dates until either is changed.
  */
-export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, onDelete, onClose }: {
+export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, onDelete, onPause, onClose }: {
   task: HomeTask | null;
   today: Ymd;
   contacts: Contact[];
   calendarAvailable: boolean;
   onSave: (input: TaskInput) => void;
   onDelete?: () => void;
+  /** Stops a job coming due until it is resumed (offered for an existing, unpaused job). */
+  onPause?: () => void;
   onClose: () => void;
 }) {
   const s = task?.schedule;
@@ -89,6 +92,18 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
                 onClose();
               }}
             />
+          )}
+          {onPause && (
+            <button
+              type="button"
+              className={secondaryButton}
+              onClick={() => {
+                onPause();
+                onClose();
+              }}
+            >
+              <Pause size={18} /> Pause
+            </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
             Cancel

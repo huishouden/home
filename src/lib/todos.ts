@@ -1,0 +1,104 @@
+import { allDayStart } from '@huishouden/pwa-kit/agenda';
+import type { Contact } from '@huishouden/pwa-kit/contacts';
+import type { Role } from '@huishouden/pwa-kit/roles';
+import { nextDueAfterDone, type Schedule } from '@huishouden/pwa-kit/schedule';
+import type { TodoAction, TodoInput } from '@huishouden/pwa-kit/todos';
+import { HOUR, midSentence, toYmd } from '@huishouden/pwa-kit/time';
+import { COLLECTIONS } from '../data/actions';
+import { screen } from './agenda';
+import type { HomeData } from './demo';
+import { PREP_LEAD_HOURS, fromWords, prepTasks, type PrepTask } from './events';
+import { CATEGORY_LABELS, type HomeTask } from './model';
+import { activeJobs, needsAttention } from './upkeep';
+
+// What Home puts on the household to-do list (households/{id}/todos, read by the portal's To-do
+// tab): the upkeep jobs Overview shows as needing doing (overdue or due in the next two weeks) and
+// the things to do before regular events Overview shows (coming up or late). Each comes with Done
+// and a cancel (Pause a job, Skip a thing to do before) written as the same writes Home makes, with
+// placeholders for the moment someone taps it. Pure: every function takes `now`.
+
+const EVERYONE: Role[] = ['admin', 'member', 'helper', 'kid'];
+const STAFF: Role[] = ['admin', 'member'];
+
+export const todoJobRef = (id: string) => `job:${id}`;
+export const todoPrepRef = (prepId: string) => `prep:${prepId}`;
+/** The history entry a job done from the to-do list adds: one id per job and due date. */
+export const todoEntryId = (task: Pick<HomeTask, 'id' | 'due'>) => `todo-${task.id}-${task.due}`;
+
+const UNIT_LETTER = { day: 'd', week: 'w', month: 'm', year: 'y' } as const;
+
+/**
+ * The job's next due date as an op value. After-done counts from the day it is done: a `$today+3m`
+ * placeholder. Set dates don't depend on that day unless the job is more than one date overdue, so
+ * the next one after both its due date and today is worked out now (the next open republishes it).
+ */
+export function nextDueValue(schedule: Schedule, due: string, now: number): string {
+  return schedule.kind === 'after-done' ? `$today+${schedule.every}${UNIT_LETTER[schedule.unit]}` : nextDueAfterDone(schedule, due, toYmd(now));
+}
+
+/** Done: Home's Mark done, as ops. The job's tick fields (helpers and kids may), and a history entry in the member's name. */
+export function jobDone(task: HomeTask, now: number): TodoAction {
+  return {
+    label: 'Done',
+    ops: [
+      { col: COLLECTIONS.tasks, id: task.id, merge: true, data: { lastDone: '$today', due: nextDueValue(task.schedule, task.due, now), updatedAt: '$now' } },
+      {
+        col: COLLECTIONS.log,
+        id: todoEntryId(task),
+        data: { date: '$today', title: task.title, taskId: task.id, ...(task.contactId ? { contactId: task.contactId } : {}), createdAt: '$now', by: '$me' },
+      },
+    ],
+    roles: EVERYONE,
+  };
+}
+
+/** Pause: kept, not due anywhere until resumed in Home. Admins, members, and whoever added it. */
+export function jobPause(task: HomeTask): TodoAction {
+  return { label: 'Pause', ops: [{ col: COLLECTIONS.tasks, id: task.id, merge: true, data: { pausedAt: '$now', updatedAt: '$now' } }], roles: STAFF, owner: true };
+}
+
+export function jobTodo(task: HomeTask, contacts: Contact[], now: number): TodoInput {
+  const contact = task.contactId ? contacts.find((c) => c.id === task.contactId)?.name : undefined;
+  return {
+    ref: todoJobRef(task.id),
+    title: task.title,
+    detail: contact ?? CATEGORY_LABELS[task.category],
+    createdAt: task.createdAt,
+    due: allDayStart(task.due),
+    url: screen('upkeep'),
+    owner: task.by,
+    private: false,
+    done: jobDone(task, now),
+    cancel: jobPause(task),
+  };
+}
+
+/**
+ * A thing to do before an occurrence. `createdAt` is when it came up (Overview shows it from
+ * `PREP_LEAD_HOURS` before its deadline), not when the event was added: the event is usually months
+ * old, and each week's "Take the garbage out" is new. Done and Skip tick it in the member's name.
+ */
+export function prepTodo(t: PrepTask, now: number): TodoInput {
+  const tick = (skipped: boolean) => [{ col: COLLECTIONS.prep, id: t.id, data: { done: true, ...(skipped ? { skipped: true } : {}), at: '$now', by: '$me' } }];
+  return {
+    ref: todoPrepRef(t.id),
+    title: t.prep.title,
+    detail: `Before ${midSentence(t.event.title)} · ${fromWords(t.occurrence.date, toYmd(now))}`,
+    createdAt: t.deadline - PREP_LEAD_HOURS * HOUR,
+    due: t.deadline,
+    url: screen('overview'),
+    owner: t.event.by,
+    private: false,
+    done: { label: 'Done', ops: tick(false), roles: EVERYONE },
+    cancel: { label: 'Skip', ops: tick(true), roles: EVERYONE },
+  };
+}
+
+/** Everything open Home publishes, for `syncTodos`: jobs due in the next two weeks (not paused), and things to do before that are coming up or late. */
+export function todoItems(data: Pick<HomeData, 'tasks' | 'contacts' | 'events' | 'prep'>, now: number): TodoInput[] {
+  const jobs = needsAttention(activeJobs(data.tasks), toYmd(now)).map((t) => jobTodo(t, data.contacts, now));
+  const prep = prepTasks(data.events, data.prep, now)
+    .filter((t) => t.state === 'soon' || t.state === 'due')
+    .map((t) => prepTodo(t, now));
+  return [...jobs, ...prep];
+}

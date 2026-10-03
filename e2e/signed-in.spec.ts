@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signInTestUser } from '@huishouden/pwa-kit/e2e';
+import { runPortalTodo, signInTestUser } from '@huishouden/pwa-kit/e2e';
 import { seedTestHousehold } from '@huishouden/pwa-kit/staging';
 
 // Signed in as an invented test user on the staging site (pwa-kit STANDARD.md "Staging"): the real
@@ -157,5 +157,45 @@ test('a landlord imported from a contact card is saved for the household', async
   } finally {
     await page.getByRole('button', { name: `Delete ${name}` }).click();
     await expect(page.getByRole('region', { name })).toHaveCount(0);
+  }
+});
+
+test('a job due today is on the portal’s To-do list, and Done there moves it on in Home', async ({ page }) => {
+  const title = `Descale the kettle ${Date.now().toString(36)}`;
+  await signInTestUser(page, { email: 'test-a@example.com' });
+  await page.getByRole('button', { name: 'Upkeep', exact: true }).click({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Add job' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New upkeep job' });
+  await dialog.getByLabel('What').fill(title);
+  // Every 3 months from when it's done, not done yet: due today.
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  const job = page.getByRole('listitem', { name: title });
+  await expect(job).toContainText('Due today');
+
+  try {
+    // Home publishes its to-dos a few seconds after a change: let that land before leaving the page.
+    await page.waitForTimeout(8_000);
+    await runPortalTodo(page, title);
+
+    await page.goto('./');
+    await page.getByRole('button', { name: 'Upkeep', exact: true }).click({ timeout: 20_000 });
+    await expect(job).toContainText('Due in 3 months', { timeout: 20_000 });
+    await expect(job).toContainText('Done today');
+    await page.getByRole('button', { name: 'History', exact: true }).first().click();
+    await expect(page.getByRole('listitem', { name: new RegExp(`^${title}, `) })).toBeVisible({ timeout: 20_000 });
+  } finally {
+    // Leave the shared household as it was, pass or fail: the history entry (if any) and the job.
+    await page.goto('./');
+    await page.getByRole('button', { name: 'History', exact: true }).first().click({ timeout: 20_000 });
+    const entry = page.getByRole('listitem', { name: new RegExp(`^${title}, `) });
+    if (await entry.count()) {
+      await entry.getByRole('button', { name: `Edit ${title}` }).click();
+      await page.getByRole('dialog', { name: 'Edit entry' }).getByRole('button', { name: 'Delete' }).click();
+      await expect(entry).toHaveCount(0);
+    }
+    await page.getByRole('button', { name: 'Upkeep', exact: true }).click();
+    await page.getByRole('button', { name: `Edit ${title}` }).click();
+    await page.getByRole('dialog', { name: 'Edit job' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('listitem', { name: title })).toHaveCount(0);
   }
 });

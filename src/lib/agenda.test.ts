@@ -136,3 +136,8 @@ describe('everything', () => {
     expect(tabFromHash('#nope')).toBe('overview');
   });
 });
+
+test('a paused job is not on the agenda', () => {
+  expect(jobAgenda({ ...filter, due: at(-1), pausedAt: now }, contacts, now)).toEqual([]);
+  expect(agendaItems(demoData(), DEMO_NOW).some((i) => i.ref === 'job:demo-task-pool')).toBe(false);
+});

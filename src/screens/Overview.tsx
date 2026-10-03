@@ -1,11 +1,11 @@
-import { Check, ChevronRight, Plus } from 'lucide-react';
+import { Check, ChevronRight, Plus, SkipForward } from 'lucide-react';
 import { personName } from '@huishouden/pwa-kit/people';
 import { prepWhen, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { HomeEvent, HomeTask, ServiceEntry, Warranty } from '../lib/model';
 import { eventWhen, nextUp, occurrenceWords, type PrepTask } from '../lib/events';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
-import { dueState, dueText, headline, needsAttention, byDue } from '../lib/upkeep';
+import { activeJobs, dueState, dueText, headline, needsAttention, byDue } from '../lib/upkeep';
 import { EXPIRING_DAYS, byExpiry, warrantyState, warrantyText } from '../lib/warranty';
 import { formatCents } from '@huishouden/pwa-kit/money';
 import { clockWords, daysBetween, longDate, midSentence, shortDate, toHhmm, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
@@ -29,19 +29,22 @@ interface Props {
   prep: PrepTask[];
   now: number;
   onTogglePrep: (task: PrepTask) => void;
+  /** Not needed this time: ticked off as skipped. */
+  onSkipPrep: (task: PrepTask) => void;
   onOpenOccurrence: (event: HomeEvent, occurrence: Occurrence) => void;
 }
 
 const contactOf = (contacts: Contact[], id?: string) => (id ? contacts.find((c) => c.id === id) : undefined);
 
 /** What the house needs now, readable from across the room: the next job first, then booked visits and warranties. */
-export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onOpenOccurrence }: Props) {
+export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onSkipPrep, onOpenOccurrence }: Props) {
   const { tasks, log, warranties, contacts, events } = store.data;
   const regular = nextUp(events, today, now).slice(0, 2);
   const prepLate = prep.filter((t) => t.state === 'due' || t.state === 'missed').length;
   const prepOpen = prep.filter((t) => t.state !== 'done').length;
-  const attention = needsAttention(tasks, today);
-  const [first, ...rest] = attention.length ? attention : byDue(tasks).slice(0, 1);
+  const jobs = activeJobs(tasks);
+  const attention = needsAttention(jobs, today);
+  const [first, ...rest] = attention.length ? attention : byDue(jobs).slice(0, 1);
   const later = attention.length ? rest : [];
   const overdue = attention.filter((t) => dueState(t.due, today).state === 'overdue').length;
   const booked = log.filter((e) => daysBetween(today, e.date) >= 0 && !(e.taskId && e.date === today && tasks.some((t) => t.lastDone === today && t.id === e.taskId)))
@@ -69,7 +72,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         {prep.length > 0 && (
           <ul className="mt-2 mb-3 border-b border-stone-200" aria-label="Before regular events">
             {prep.map((t) => (
-              <PrepRow key={t.id} task={t} now={now} today={today} me={store.me} onToggle={() => onTogglePrep(t)} />
+              <PrepRow key={t.id} task={t} now={now} today={today} me={store.me} onToggle={() => onTogglePrep(t)} onSkip={() => onSkipPrep(t)} />
             ))}
           </ul>
         )}
@@ -249,18 +252,21 @@ function Row({ task, today, onDone, onEdit }: { task: HomeTask; today: Ymd; onDo
 
 /**
  * A thing to do before a regular event: "Take the garbage out · tonight by 7 PM", for which event,
- * and a big Done toggle; once done, who did it and when (tap again to undo). Terracotta once late.
+ * a big Done toggle and a quiet Skip for when it isn't needed this time; once done or skipped, who
+ * did it and when (tap again to undo). Terracotta once late.
  */
-function PrepRow({ task, now, today, me, onToggle }: { task: PrepTask; now: number; today: Ymd; me: string; onToggle: () => void }) {
+function PrepRow({ task, now, today, me, onToggle, onSkip }: { task: PrepTask; now: number; today: Ymd; me: string; onToggle: () => void; onSkip: () => void }) {
   const { event, occurrence: o, prep, state, tick } = task;
   const late = state === 'due' || state === 'missed';
   const done = state === 'done';
+  const skipped = done && !!tick?.skipped;
   const when = prepWhen(task.deadline, now);
   const detail = done && tick
-    ? `Done by ${personName(tick.by, { email: me })} at ${clockWords(toHhmm(tick.at))}`
+    ? `${skipped ? 'Skipped' : 'Done'} by ${personName(tick.by, { email: me })} at ${clockWords(toHhmm(tick.at))}`
     : state === 'missed'
       ? `Missed: ${midSentence(event.title)} was ${o.time ? `at ${clockWords(o.time)}` : 'today'}`
       : `For ${midSentence(eventWhen(event, o, today))}`;
+  const word = skipped ? 'Skipped' : 'Done';
   return (
     <li className="flex items-center gap-3 py-2.5 sm:gap-4" aria-label={prep.title}>
       <span className="hidden sm:block">
@@ -273,16 +279,25 @@ function PrepRow({ task, now, today, me, onToggle }: { task: PrepTask; now: numb
         </p>
         <p className={`text-base ${late ? 'font-semibold text-terracotta-dark' : 'text-stone-600'}`}>{detail}</p>
       </div>
+      {!done && state !== 'missed' && (
+        <button type="button" className={`${ghostButton} shrink-0`} onClick={onSkip} aria-label={`Skip: ${prep.title}`}>
+          Skip
+        </button>
+      )}
       <button
         type="button"
         aria-pressed={done}
-        aria-label={`Done: ${prep.title}`}
+        aria-label={`${word}: ${prep.title}`}
         onClick={onToggle}
         className={`inline-flex min-h-14 shrink-0 items-center gap-2 rounded-xl border px-4 text-lg font-semibold sm:px-5 transition-colors duration-150 ${
-          done ? 'border-forest-700 bg-forest-700 text-white hover:bg-forest-600' : 'border-stone-200 bg-white text-stone-800 hover:border-forest-400'
+          skipped
+            ? 'border-stone-300 bg-stone-100 text-stone-700 hover:border-stone-400'
+            : done
+              ? 'border-forest-700 bg-forest-700 text-white hover:bg-forest-600'
+              : 'border-stone-200 bg-white text-stone-800 hover:border-forest-400'
         }`}
       >
-        <Check size={22} /> Done
+        {skipped ? <SkipForward size={22} /> : <Check size={22} />} {word}
       </button>
     </li>
   );

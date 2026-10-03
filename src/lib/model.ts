@@ -38,6 +38,8 @@ export interface HomeTaskData {
   /** A booked visit in Google Calendar that the due date came from. */
   calendarEventId?: string;
   calendarLink?: string;
+  /** Paused (ms): kept with its schedule, but not due anywhere until resumed. */
+  pausedAt?: number;
   createdAt: number;
   updatedAt?: number;
   by: string;
@@ -124,9 +126,13 @@ export interface HomeEvent extends HomeEventData {
   id: string;
 }
 
-/** homeEventPrep/{eventId}_{day}: the thing to do before one occurrence, ticked off. `day` is the occurrence's original day. */
+/**
+ * homeEventPrep/{eventId}_{day}: the thing to do before one occurrence, ticked off. `day` is the
+ * occurrence's original day. `skipped`: not needed this time (still `done`, so it no longer comes due).
+ */
 export interface PrepTickData {
   done: true;
+  skipped?: true;
   /** When it was ticked, ms. */
   at: number;
   by: string;
@@ -139,10 +145,10 @@ export const prepTickId = (eventId: string, original: Ymd) => `${eventId}_${orig
 
 export const LIMITS = { title: 120, notes: 1000, who: 120, item: 120, details: 200, url: 500 } as const;
 
-export const TASK_KEYS = ['title', 'category', 'schedule', 'due', 'lastDone', 'contactId', 'notes', 'calendarEventId', 'calendarLink', 'createdAt', 'updatedAt', 'by'] as const;
+export const TASK_KEYS = ['title', 'category', 'schedule', 'due', 'lastDone', 'contactId', 'notes', 'calendarEventId', 'calendarLink', 'pausedAt', 'createdAt', 'updatedAt', 'by'] as const;
 export const SERVICE_KEYS = ['date', 'title', 'taskId', 'contactId', 'who', 'costCents', 'notes', 'calendarEventId', 'calendarLink', 'createdAt', 'updatedAt', 'by'] as const;
 export const EVENT_KEYS = ['title', 'kind', 'rule', 'time', 'contactId', 'notes', 'prep', 'exceptions', 'createdAt', 'updatedAt', 'by'] as const;
-export const PREP_TICK_KEYS = ['done', 'at', 'by'] as const;
+export const PREP_TICK_KEYS = ['done', 'skipped', 'at', 'by'] as const;
 export const WARRANTY_KEYS = ['item', 'details', 'purchaseDate', 'warrantyEnd', 'receiptUrl', 'manualUrl', 'contactId', 'notes', 'createdAt', 'updatedAt', 'by'] as const;
 
 export type TaskInput = Pick<HomeTaskData, 'title' | 'category' | 'schedule' | 'due' | 'lastDone' | 'contactId' | 'notes' | 'calendarEventId' | 'calendarLink'>;
@@ -257,5 +263,5 @@ export function eventDoc(input: EventInput, s: Stamp): HomeEventData {
   });
 }
 
-export const prepTickDoc = (by: string, at: number): PrepTickData => ({ done: true, at: Math.round(at), by });
+export const prepTickDoc = (by: string, at: number, skipped = false): PrepTickData => ({ done: true, ...(skipped ? { skipped: true as const } : {}), at: Math.round(at), by });
 

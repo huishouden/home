@@ -3,9 +3,9 @@ import { applyOps as applyKitOps, stampFor, withoutId, type Backend as KitBacken
 import { toYmd } from '@huishouden/pwa-kit/time';
 import { track } from '@huishouden/pwa-kit/observability';
 import type { HomeData } from '../lib/demo';
-import { doneFromEntry, markDone, tickedTask } from '../lib/done';
+import { doneFromEntry, markDone, resumedDue, tickedTask } from '../lib/done';
 import { withOccurrenceChange } from '../lib/events';
-import { eventDoc, prepTickDoc, prepTickId, serviceDoc, taskDoc, warrantyDoc } from '../lib/model';
+import { eventDoc, prepTickDoc, prepTickId, serviceDoc, taskDoc, warrantyDoc, type HomeTask, type TaskInput } from '../lib/model';
 import type { HomeActions } from './types';
 
 // The Home actions, written once over a storage interface that the live (Firestore) and the sample
@@ -44,7 +44,20 @@ export function createActions(backend: Backend, read: () => HomeData, me: string
   return {
     saveTask: (id, input) => {
       track('save job');
-      save('tasks', taskDoc)(id, input);
+      // An edit keeps a paused job paused.
+      const pausedAt = (find('tasks', id) as HomeTask | undefined)?.pausedAt;
+      save('tasks', (i: TaskInput, s) => ({ ...taskDoc(i, s), ...(pausedAt !== undefined ? { pausedAt } : {}) }))(id, input);
+    },
+    pauseTask: (task) => {
+      track('pause job');
+      const now = clock();
+      put('tasks', task.id, { ...withoutId(task), pausedAt: now, updatedAt: now });
+    },
+    resumeTask: (task) => {
+      track('resume job');
+      const now = clock();
+      const { pausedAt: _paused, ...rest } = withoutId(task);
+      put('tasks', task.id, { ...rest, due: resumedDue(task, toYmd(now)), updatedAt: now });
     },
     deleteTask: (id) => del('tasks', id),
     restoreTask: (t) => put('tasks', t.id, withoutId(t)),
@@ -98,6 +111,10 @@ export function createActions(backend: Backend, read: () => HomeData, me: string
     tickPrep: (event, original) => {
       track('tick prep');
       put('prep', prepTickId(event.id, original), prepTickDoc(me, clock()));
+    },
+    skipPrep: (event, original) => {
+      track('skip prep');
+      put('prep', prepTickId(event.id, original), prepTickDoc(me, clock(), true));
     },
     untickPrep: (event, original) => del('prep', prepTickId(event.id, original)),
     saveContact: (id, input) => backend.contacts.save(id, input),

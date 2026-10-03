@@ -78,7 +78,10 @@ function tasks(): HomeTask[] {
     ['demo-task-dryer', 'Dryer vent cleaning', 'appliances', after(1, 'year'), '2031-12-02', '2030-12-02'],
     ['demo-task-heater', 'Water heater flush', 'plumbing', after(1, 'year'), '2032-03-15', '2031-03-15', PLUMBING],
     ['demo-task-insurance', 'Home insurance renewal', 'paperwork', insurance, firstDue(insurance, DEMO_TODAY), '2031-02-01', INSURANCE, 'Compare quotes a month before.'],
+    ['demo-task-pool', 'Pool filter clean', 'pool', after(1, 'month'), day(-2), addMonths(day(-2), -1), undefined, 'Closed for the winter.'],
   ];
+  // The pool is closed for the winter: its job is paused, not due anywhere until resumed.
+  const paused: Record<string, number> = { 'demo-task-pool': new Date(2031, 9, 1, 18).getTime() };
   return specs.map(([id, title, category, schedule, due, lastDone, contactId, notes], i) => ({
     id,
     title,
@@ -88,6 +91,7 @@ function tasks(): HomeTask[] {
     ...(lastDone ? { lastDone } : {}),
     ...(contactId ? { contactId } : {}),
     ...(notes ? { notes } : {}),
+    ...(paused[id] ? { pausedAt: paused[id] } : {}),
     createdAt: created,
     by: i % 2 ? ALEX : SAM,
   }));
