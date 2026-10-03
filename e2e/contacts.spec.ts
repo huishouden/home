@@ -5,7 +5,7 @@ import places from './fixtures/nominatim.json' with { type: 'json' };
 // OpenStreetMap's Nominatim, stubbed here with invented results.
 
 const openContacts = async (page: Page) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Contacts', exact: true }).click();
 };
 
@@ -61,6 +61,6 @@ test('deleting a contact can be undone', async ({ page }) => {
 });
 
 test('the overview shows who does the next job, with their number', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.getByRole('region', { name: 'Upkeep' }).getByRole('link', { name: 'Call Example Roofing, (555) 010-0150' })).toHaveAttribute('href', 'tel:5550100150');
 });

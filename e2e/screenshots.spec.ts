@@ -159,7 +159,7 @@ test('phone: upkeep', async ({ page }) => {
 // Roles: a helper ticks jobs off and adds their own, and is told who changes the rest.
 test('a helper’s upkeep', ({ page }) =>
   captureScreenshot(page, 'helper-upkeep', {
-    path: '/?as=helper',
+    path: './?as=helper',
     fixedTime,
     prepare: async (p) => {
       await tab('Upkeep')(p);
@@ -173,7 +173,7 @@ test('a helper’s upkeep', ({ page }) =>
 
 test('a helper’s warranties', ({ page }) =>
   captureScreenshot(page, 'helper-warranties', {
-    path: '/?as=helper',
+    path: './?as=helper',
     fixedTime,
     prepare: async (p) => {
       await tab('Warranties')(p);

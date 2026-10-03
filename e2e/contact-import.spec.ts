@@ -11,7 +11,7 @@ import otherContacts from './fixtures/contacts/other-contacts.json' with { type:
 const fixture = (name: string) => new URL(`./fixtures/contacts/${name}`, import.meta.url).pathname;
 
 const newContact = async (page: Page) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Contacts', exact: true }).click();
   await page.getByRole('button', { name: 'Add contact' }).click();
   return page.getByRole('dialog', { name: 'New contact' });
@@ -100,7 +100,7 @@ test('Find in my Google Contacts searches saved and other contacts', async ({ pa
 });
 
 test('a contact card shared to the app opens a new contact, filled in', async ({ page }) => {
-  await shareContactCard(page, readFileSync(fixture('landlord.vcf'), 'utf8'), { name: 'Jordan Example.vcf' });
+  await shareContactCard(page, readFileSync(fixture('landlord.vcf'), 'utf8'), { name: 'Jordan Example.vcf', path: './' });
   const dialog = page.getByRole('dialog', { name: 'New contact' });
   await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Jordan Example');
   await expect(dialog.getByText('from the shared contact')).toBeVisible();

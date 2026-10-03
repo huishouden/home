@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const openWarranties = async (page: import('@playwright/test').Page) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Warranties', exact: true }).click();
 };
 
@@ -44,9 +44,9 @@ test('deleting an item can be undone', async ({ page }) => {
 });
 
 test('an agenda link opens its screen', async ({ page }) => {
-  await page.goto('/#warranties');
+  await page.goto('./#warranties');
   await expect(page.locator('main section[aria-label]').first()).toHaveAttribute('aria-label', 'Refrigerator');
-  await page.goto('/#upkeep');
+  await page.goto('./#upkeep');
   await expect(page.getByRole('heading', { name: 'Upkeep', level: 2 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mark done: Gutter cleaning' })).toBeVisible();
 });

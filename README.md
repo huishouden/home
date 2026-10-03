@@ -2,7 +2,7 @@
 
 Keeping the house in good shape, together, from the living-room tablet or anyone's phone.
 
-Live at https://huishouden-home.web.app, also linked from the [Huishouden portal](https://huishouden-piekstra.web.app).
+Live at https://huishouden-piekstra.web.app/home/, also linked from the [Huishouden portal](https://huishouden-piekstra.web.app). The old address, huishouden-home.web.app, redirects there.
 Installable on the tablet, phones and laptops, and works offline (changes sync when the connection is back).
 
 ## Screenshots

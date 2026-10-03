@@ -18,10 +18,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
     pwaApp({
+      // Home's path on the suite's one site (pwa-kit docs/one-site.md).
+      base: '/home/',
       name: 'Huishouden Home',
       shortName: 'Home',
       description: "Keeping the house in good shape",
-      url: 'https://huishouden-home.web.app',
+      url: 'https://huishouden-piekstra.web.app/home/',
       // Contacts → Share → Home on Android: a provider's contact card becomes a contact.
       shareTarget: { contacts: true },
       themeColor: '#1b4332',

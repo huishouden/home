@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const openHistory = async (page: import('@playwright/test').Page) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'History', exact: true }).first().click();
 };
 

@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }, info) => {
 const regularTab = (page: Page) => page.getByRole('button', { name: 'Regular', exact: true }).first().click();
 
 test('the thing to do before shows in Needs doing; Done records who and when, and Undo puts it back', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   const before = page.getByRole('region', { name: 'Upkeep' }).getByRole('list', { name: 'Before regular events' });
   const gate = before.getByRole('listitem', { name: 'Unlock the side gate' });
   await expect(gate).toContainText('Unlock the side gate · tonight by 7 PM');
@@ -38,7 +38,7 @@ test('the thing to do before shows in Needs doing; Done records who and when, an
 test('a thing to do before turns terracotta once late, and says missed after the event begins', async ({ page }) => {
   // The sample's clock starts at 10:30 and runs on from there.
   await page.clock.install({ time: new Date('2031-10-16T10:30:00') });
-  await page.goto('/');
+  await page.goto('./');
   const gate = page.getByRole('listitem', { name: 'Unlock the side gate' });
   await expect(gate).toContainText('tonight by 7 PM');
   await page.clock.fastForward('09:30:00');
@@ -49,7 +49,7 @@ test('a thing to do before turns terracotta once late, and says missed after the
 });
 
 test('moving one occurrence leaves the schedule alone, and can be put back', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await regularTab(page);
   const lawn = page.getByRole('listitem', { name: 'Lawn service' });
   await expect(lawn).toContainText('Every other Friday at 9 AM');
@@ -76,7 +76,7 @@ test('moving one occurrence leaves the schedule alone, and can be put back', asy
 });
 
 test('skipping one occurrence: the next one is next, and Undo brings it back', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await regularTab(page);
   const garbage = page.getByRole('listitem', { name: 'Garbage pickup' });
   await garbage.getByRole('button', { name: 'Garbage pickup, Thu, Oct 23, 7 AM' }).click();
@@ -93,7 +93,7 @@ test('skipping one occurrence: the next one is next, and Undo brings it back', a
 });
 
 test('a new event from a preset, with the evening-before task and its reminder', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await regularTab(page);
   await page.getByRole('button', { name: 'Add event' }).click();
   const dialog = page.getByRole('dialog', { name: 'New regular event' });
@@ -114,7 +114,7 @@ test('a new event from a preset, with the evening-before task and its reminder',
 
 test('a repeating garbage day in the calendar is offered as one regular event', async ({ page }) => {
   await stubCalendar(page, { events: [...repeatingEvents] });
-  await page.goto('/');
+  await page.goto('./');
   const card = page.getByRole('region', { name: 'Regular events in your calendar' });
   await expect(card).toContainText('Looks regular: Trash day · Every Thursday at 7 AM');
   // The one-off visit is still offered as a visit; the pickups are not.
@@ -137,7 +137,7 @@ test('a repeating garbage day in the calendar is offered as one regular event', 
 
 test('Import from calendar offers a repeating pickup as a regular event', async ({ page }) => {
   await stubCalendar(page, { events: [...repeatingEvents, ...calendarEvents.slice(0, 1)] });
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'History', exact: true }).first().click();
   await page.getByRole('button', { name: 'Import from calendar' }).click();
   const dialog = page.getByRole('dialog', { name: 'Import from calendar' });
