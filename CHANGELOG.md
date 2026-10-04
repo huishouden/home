@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/huishouden/home/compare/v1.10.0...v1.11.0) (2026-10-04)
+
+
+### Features
+
+* Home in Spanish and Dutch ([#40](https://github.com/huishouden/home/issues/40)) ([5ab0545](https://github.com/huishouden/home/commit/5ab0545c6d196fcc9d2d31b4be660c26bec947f0))
+
 ## [1.10.0](https://github.com/huishouden/home/compare/v1.9.1...v1.10.0) (2026-10-03)
 
 
