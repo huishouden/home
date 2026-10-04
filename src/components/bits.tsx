@@ -22,9 +22,12 @@ import {
 } from 'lucide-react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { telHref } from '@huishouden/pwa-kit/places';
-import { CATEGORY_LABELS, EVENT_KIND_LABELS, type Category, type EventKind } from '../lib/model';
+import { categoryLabel, eventKindLabel, type Category, type EventKind } from '../lib/model';
+import { roleLabel } from '../lib/contacts';
+import { useT } from '../i18n';
+import { capitalize } from '@huishouden/pwa-kit/i18n';
 import { deleteButton, inputClass, linkClass } from '@huishouden/pwa-kit/react/ui';
-import { MONTHS, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
+import { atTime, monthShort, ymdParts, type Ymd } from '@huishouden/pwa-kit/time';
 
 const ICONS: Record<Category, LucideIcon> = {
   hvac: Fan,
@@ -48,7 +51,7 @@ export function CategoryTile({ category, attention, size = 'md' }: { category: C
     <span
       className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-attention-tint text-attention' : 'bg-tint text-link'}`}
       role="img"
-      aria-label={CATEGORY_LABELS[category]}
+      aria-label={categoryLabel(category)}
     >
       <Icon size={size === 'lg' ? 28 : 22} strokeWidth={2} aria-hidden="true" />
     </span>
@@ -73,7 +76,7 @@ export function EventTile({ kind, attention, size = 'md' }: { kind: EventKind; a
     <span
       className={`inline-flex ${box} shrink-0 items-center justify-center rounded-xl ${attention ? 'bg-attention-tint text-attention' : 'bg-tint text-link'}`}
       role="img"
-      aria-label={EVENT_KIND_LABELS[kind]}
+      aria-label={eventKindLabel(kind)}
     >
       <Icon size={size === 'lg' ? 28 : 22} strokeWidth={2} aria-hidden="true" />
     </span>
@@ -85,7 +88,7 @@ export function DateTile({ date, strong }: { date: Ymd; strong?: boolean }) {
   const p = ymdParts(date)!;
   return (
     <div className={`flex w-16 shrink-0 flex-col items-center rounded-xl py-1.5 ${strong ? 'bg-forest-700 text-white' : 'bg-tint text-link'}`} aria-hidden="true">
-      <span className="text-sm font-medium">{MONTHS[p.m - 1].slice(0, 3)}</span>
+      <span className="text-sm font-medium">{capitalize(monthShort(atTime(date, '12:00')))}</span>
       <span className="text-2xl leading-tight font-semibold tabular-nums">{p.d}</span>
     </div>
   );
@@ -93,14 +96,15 @@ export function DateTile({ date, strong }: { date: Ymd; strong?: boolean }) {
 
 /** Who does it: the contact's name and a tap-to-call number, or the typed name. */
 export function WhoLine({ contact, who, compact }: { contact?: Contact; who?: string; compact?: boolean }) {
+  const t = useT();
   if (!contact && !who) return null;
   return (
     <div className={`flex flex-wrap items-center gap-x-4 text-muted ${compact ? 'text-sm' : 'text-base'}`}>
       <span className="flex min-h-11 items-center gap-1.5">
-        <UserRound size={16} aria-hidden="true" /> {contact?.name ?? who}
+        <UserRound size={16} aria-hidden="true" /> <span translate="no">{contact?.name ?? who}</span>
       </span>
       {contact?.phone && (
-        <a className={`${linkClass} tabular-nums`} href={telHref(contact.phone)} aria-label={`Call ${contact.name}, ${contact.phone}`}>
+        <a className={`${linkClass} tabular-nums`} href={telHref(contact.phone)} aria-label={t('who.call', { name: contact.name, phone: contact.phone })}>
           <Phone size={16} aria-hidden="true" /> {contact.phone}
         </a>
       )}
@@ -110,31 +114,33 @@ export function WhoLine({ contact, who, compact }: { contact?: Contact; who?: st
 
 /** The red Delete at the left of a dialog footer. */
 export function DeleteButton({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <button type="button" className={deleteButton} onClick={onClick}>
-      <Trash2 size={18} /> Delete
+      <Trash2 size={18} /> {t('common.delete')}
     </button>
   );
 }
 
 /** A select of the household's contacts, keeping a removed one visible until another is picked. */
-export function ContactSelect({ id, value, contacts, onChange, empty = 'No one in particular' }: {
+export function ContactSelect({ id, value, contacts, onChange, empty }: {
   id?: string;
   value: string;
   contacts: Contact[];
   onChange: (id: string) => void;
   empty?: string;
 }) {
+  const t = useT();
   const removed = value && !contacts.some((c) => c.id === value);
   return (
     <select id={id} className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{empty}</option>
+      <option value="">{empty ?? t('contactSelect.noOne')}</option>
       {contacts.map((c) => (
         <option key={c.id} value={c.id}>
-          {c.role ? `${c.name} (${c.role})` : c.name}
+          {c.role ? t('contactSelect.withRole', { name: c.name, role: roleLabel(c.role) }) : c.name}
         </option>
       ))}
-      {removed && <option value={value}>A removed contact</option>}
+      {removed && <option value={value}>{t('contactSelect.removed')}</option>}
     </select>
   );
 }

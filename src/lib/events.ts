@@ -7,7 +7,9 @@ import {
   describeRule, eventOccurrences, prepState, prepWindow, pruneChanges, weekdayOfMonth, withChange,
   type EventPrep, type EventRule, type Nth, type Occurrence, type OccurrenceChange, type PrepState,
 } from '@huishouden/pwa-kit/schedule';
-import { HOUR, addDays, atTime, clockWords, daysBetween, midSentence, shortDate, toYmd, weekday, WEEKDAYS, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
+import { HOUR, addDays, atClock, atTime, clockWords, daysBetween, formatDayShort, formatYmd, midSentence, shortDate, toYmd, weekday, weekdayName, weekdayShort, ymdParts, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
+import { capitalize, type Lang } from '@huishouden/pwa-kit/i18n';
+import { t } from '../i18n';
 import { prepTickId, type EventInput, type EventKind, type HomeEvent, type PrepTick } from './model';
 
 // Regular events (garbage pickup, a lawn service) and the things to do before them: what the
@@ -28,32 +30,51 @@ export interface EventPreset {
 
 const evening = { daysBefore: 1, time: '19:00' };
 
-export const EVENT_PRESETS: readonly EventPreset[] = [
-  { id: 'trash', label: 'Garbage', title: 'Garbage pickup', kind: 'trash', rule: (start) => ({ freq: 'week', every: 1, start }), prep: { title: 'Take the garbage out', offset: evening, remind: true } },
-  { id: 'recycling', label: 'Recycling', title: 'Recycling pickup', kind: 'recycling', rule: (start) => ({ freq: 'week', every: 2, start }), prep: { title: 'Put the recycling out', offset: evening, remind: true } },
-  { id: 'yard', label: 'Yard waste', title: 'Yard waste pickup', kind: 'yard waste', rule: (start) => ({ freq: 'week', every: 1, start }), prep: { title: 'Put the yard waste out', offset: evening, remind: false } },
-  { id: 'lawn', label: 'Lawn service', title: 'Lawn service', kind: 'lawn', rule: (start) => ({ freq: 'week', every: 2, start }) },
-  {
-    id: 'hoa',
-    label: 'HOA meeting',
-    title: 'HOA meeting',
-    kind: 'hoa',
-    time: '19:00',
-    rule: (start) => {
-      const w = weekdayOfMonth(start);
-      return { freq: 'month', every: 1, start, nth: (w.last && w.nth === 5 ? -1 : Math.min(w.nth, 4)) as Nth, weekday: w.weekday };
+/** The presets in the active language: what a new event is called is the household's own words. */
+export function eventPresets(): EventPreset[] {
+  return [
+    { id: 'trash', label: t('preset.trash'), title: t('preset.trashTitle'), kind: 'trash', rule: (start) => ({ freq: 'week', every: 1, start }), prep: { title: t('prep.trash'), offset: evening, remind: true } },
+    { id: 'recycling', label: t('preset.recycling'), title: t('preset.recyclingTitle'), kind: 'recycling', rule: (start) => ({ freq: 'week', every: 2, start }), prep: { title: t('prep.recycling'), offset: evening, remind: true } },
+    { id: 'yard', label: t('preset.yard'), title: t('preset.yardTitle'), kind: 'yard waste', rule: (start) => ({ freq: 'week', every: 1, start }), prep: { title: t('prep.yard'), offset: evening, remind: false } },
+    { id: 'lawn', label: t('preset.lawn'), title: t('preset.lawnTitle'), kind: 'lawn', rule: (start) => ({ freq: 'week', every: 2, start }) },
+    {
+      id: 'hoa',
+      label: t('preset.hoa'),
+      title: t('preset.hoaTitle'),
+      kind: 'hoa',
+      time: '19:00',
+      rule: (start) => {
+        const w = weekdayOfMonth(start);
+        return { freq: 'month', every: 1, start, nth: (w.last && w.nth === 5 ? -1 : Math.min(w.nth, 4)) as Nth, weekday: w.weekday };
+      },
     },
-  },
-  { id: 'cleaning', label: 'Cleaning', title: 'House cleaning', kind: 'cleaning', rule: (start) => ({ freq: 'week', every: 2, start }) },
-];
+    { id: 'cleaning', label: t('preset.cleaning'), title: t('preset.cleaningTitle'), kind: 'cleaning', rule: (start) => ({ freq: 'week', every: 2, start }) },
+  ];
+}
 
+/** What each kind usually needs doing before, in the active language: the title a newly ticked "Something to do before" starts with. */
+export function prepTitleFor(kind: EventKind): string {
+  if (kind === 'trash') return t('prep.trash');
+  if (kind === 'recycling') return t('prep.recycling');
+  if (kind === 'yard waste') return t('prep.yard');
+  if (kind === 'lawn') return t('prep.lawn');
+  if (kind === 'cleaning') return t('prep.cleaning');
+  return '';
+}
+
+// Words calendars and typed titles use for each kind, in English, Spanish and Dutch: households
+// name their pickups in their own language whatever language the app is in. Checked in this order
+// ("plastic afval" is recycling, "gft-afval" yard waste, before plain "afval").
 const KIND_WORDS: [EventKind, RegExp][] = [
-  ['recycling', /\brecycl\w*/i],
-  ['yard waste', /\b(yard waste|green waste|garden waste|compost|leaf pickup|brush pickup)\b/i],
-  ['trash', /\b(garbage|trash|rubbish|refuse|bins?|waste)\b/i],
-  ['lawn', /\b(lawn|landscap\w*|mow\w*|gardener)\b/i],
-  ['hoa', /\b(hoa|homeowners)\b/i],
-  ['cleaning', /\b(clean\w*|maid|housekeep\w*)\b/i],
+  ['recycling', /\b(recycl\w*|reciclaj\w*|reciclables?|oud ?papier|papier en karton|plastic|pmd)\b/i],
+  [
+    'yard waste',
+    /\b(yard waste|green waste|garden waste|compost|leaf pickup|brush pickup|residuos de jard[ií]n|restos de poda|poda|gft\w*|groenafval|tuinafval|snoeiafval)\b/i,
+  ],
+  ['trash', /\b(garbage|trash|rubbish|refuse|bins?|waste|basura|desechos|residuos|afval\w*|restafval|vuilnis\w*|huisvuil|kliko)\b/i],
+  ['lawn', /\b(lawn|landscap\w*|mow\w*|gardener|c[ée]sped|pasto|jardiner\w*|jard[ií]n(?! de ni[ñn]os| infantil)|grasmaai\w*|gras maaien|tuinman|hovenier|tuinonderhoud|tuin)\b/i],
+  ['hoa', /\b(hoa|homeowners|asociaci[óo]n de (?:propietarios|vecinos)|(?:junta|reuni[óo]n) de vecinos|vve)\b/i],
+  ['cleaning', /\b(clean\w*|maid|housekeep\w*|limpieza|limpiar|schoonma\w*|werkster|poetsen)\b/i],
 ];
 
 /** The kind of regular event a title is about ("Recycling pickup" → recycling), or null. */
@@ -62,11 +83,19 @@ export function guessEventKind(title: string): EventKind | null {
   return null;
 }
 
-/** What calendar suggestions look for beyond house visits, so pickups can be offered as regular events. */
-export const REGULAR_CALENDAR_QUERIES = ['garbage', 'trash', 'recycling', 'yard waste', 'landscape'];
+/**
+ * What calendar suggestions look for beyond house visits, so pickups can be offered as regular
+ * events, by the language a household's calendar may be in.
+ */
+export const REGULAR_CALENDAR_QUERIES: Record<Lang, readonly string[]> = {
+  en: ['garbage', 'trash', 'recycling', 'yard waste', 'landscape'],
+  es: ['basura', 'reciclaje', 'césped', 'jardín'],
+  nl: ['afval', 'vuilnis', 'oud papier', 'gft', 'plastic', 'grasmaaien', 'tuin'],
+};
 
-/** Calendar events about these are offered as a regular event when they repeat. */
-export const REGULAR_WORDS = /\b(garbage|trash|recycl\w*|yard waste|lawn|landscap\w*)/i;
+/** Calendar events about these are offered as a regular event when they repeat (English, Spanish, Dutch). */
+export const REGULAR_WORDS =
+  /\b(garbage|trash|recycl\w*|yard waste|lawn|landscap\w*|basura|reciclaj\w*|c[ée]sped|jard[ií]n(?! de ni[ñn]os| infantil)|afval\w*|vuilnis\w*|oud ?papier|gft\w*|plastic|pmd|grasmaai\w*|tuin)/i;
 
 const sameTitle = (a: string, b: string) => a.trim().toLowerCase().replace(/\s+/g, ' ') === b.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -135,15 +164,23 @@ export function occurrencesOf(event: HomeEvent, from: Ymd, to: Ymd, includeSkipp
   return eventOccurrences(event.rule, from, to, { time: event.time, changes: event.exceptions, includeSkipped });
 }
 
-/** "Today", "Tomorrow", "Thu", "Thu, Oct 30"; with the time: "Thu 7 AM". */
-export function occurrenceWords(o: Pick<Occurrence, 'date' | 'time'>, today: Ymd): string {
-  const n = daysBetween(today, o.date);
-  const day = n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n > 1 && n < 7 ? WEEKDAYS[weekday(o.date)].slice(0, 3) : `${WEEKDAYS[weekday(o.date)].slice(0, 3)}, ${shortDate(o.date, today)}`;
-  return o.time ? `${day}${day.includes(',') ? ',' : ''} ${clockWords(o.time)}` : day;
+/** "Thu, Oct 30" ("jue, 30 oct", "do 30 okt"), with the year when it isn't this one; lowercase where the language writes it so mid-sentence. */
+function dayShort(day: Ymd, today: Ymd): string {
+  const noon = atTime(day, '12:00');
+  return ymdParts(day)!.y === ymdParts(today)!.y ? formatDayShort(noon) : formatYmd(day, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** "Thursday, December 25" or "Thu, Dec 25": how a moved one says where it came from. */
-export const fromWords = (original: Ymd, today: Ymd) => `${WEEKDAYS[weekday(original)].slice(0, 3)}, ${shortDate(original, today)}`;
+/** "Today", "Tomorrow", "Thu", "Thu, Oct 30"; with the time: "Thu 7 AM", "Thu, Oct 30, 7 AM". */
+export function occurrenceWords(o: Pick<Occurrence, 'date' | 'time'>, today: Ymd): string {
+  const n = daysBetween(today, o.date);
+  const near = n >= 0 && n < 7;
+  const day = n === 0 ? t('occurrence.today') : n === 1 ? t('occurrence.tomorrow') : n > 1 && n < 7 ? capitalize(weekdayShort(atTime(o.date, '12:00'))) : capitalize(dayShort(o.date, today));
+  if (!o.time) return day;
+  return t(near ? 'occurrence.nearTime' : 'occurrence.farTime', { day, time: clockWords(o.time) });
+}
+
+/** "Thu, Dec 25": how a moved one says where it came from. */
+export const fromWords = (original: Ymd, today: Ymd) => dayShort(original, today);
 
 export interface NextUp {
   event: HomeEvent;
@@ -221,8 +258,16 @@ export function prepTasks(events: HomeEvent[], ticks: PrepTick[], now: number): 
 /** "Garbage pickup tomorrow at 7 AM", "Lawn service today": the event, seen from the deadline's day. */
 export function eventWhen(event: Pick<HomeEvent, 'title'>, o: Pick<Occurrence, 'date' | 'time'>, from: Ymd): string {
   const n = daysBetween(from, o.date);
-  const day = n === 0 ? 'today' : n === 1 ? 'tomorrow' : n > 1 && n < 7 ? `on ${WEEKDAYS[weekday(o.date)]}` : `on ${shortDate(o.date, from)}`;
-  return `${event.title} ${day}${o.time ? ` at ${clockWords(o.time)}` : ''}`;
+  const title = event.title;
+  const when =
+    n === 0
+      ? t('eventWhen.today', { title })
+      : n === 1
+        ? t('eventWhen.tomorrow', { title })
+        : n > 1 && n < 7
+          ? t('eventWhen.weekday', { title, weekday: weekdayName(weekday(o.date)) })
+          : t('eventWhen.date', { title, date: shortDate(o.date, from) });
+  return o.time ? t('eventWhen.withTime', { when, at: atClock(o.time) }) : when;
 }
 
 // ---- The household agenda and reminders ----
@@ -249,7 +294,7 @@ export function eventAgenda(event: HomeEvent, contacts: Contact[], now: number, 
       title: event.title,
       start: o.time ? atTime(o.date, o.time) : allDayStart(o.date),
       allDay: !o.time,
-      detail: joined(o.moved ? `Moved from ${fromWords(o.original, today)}` : describeRule(event.rule), o.note, who),
+      detail: joined(o.moved ? t('events.movedFrom', { date: fromWords(o.original, today) }) : describeRule(event.rule), o.note, who),
       url,
     }))
     .filter((i) => inAgendaWindow(i, now));
@@ -264,19 +309,19 @@ export function prepAgenda(event: HomeEvent, ticks: PrepTick[], now: number, url
   if (!event.prep) return [];
   const today = toYmd(now);
   return prepTasksBetween([event], ticks, today, addDays(today, EVENT_AGENDA_DAYS), now)
-    .filter((t) => t.state !== 'missed')
-    .map((t): AgendaEntry => {
+    .filter((task) => task.state !== 'missed')
+    .map((task): AgendaEntry => {
       // Ends by that night, so the calendar shows it on its own day only.
-      const end = Math.min(t.missedAt, atTime(toYmd(t.deadline), '23:59'));
+      const end = Math.min(task.missedAt, atTime(toYmd(task.deadline), '23:59'));
       return {
         kind: 'task',
-        title: t.prep.title,
-        start: t.deadline,
-        ...(end > t.deadline ? { end } : {}),
+        title: task.prep.title,
+        start: task.deadline,
+        ...(end > task.deadline ? { end } : {}),
         allDay: false,
-        detail: `Before ${midSentence(eventWhen(event, t.occurrence, toYmd(t.deadline)))}`,
+        detail: t('events.before', { what: midSentence(eventWhen(event, task.occurrence, toYmd(task.deadline))) }),
         url,
-        status: t.tick ? 'done' : now >= t.deadline ? 'overdue' : 'upcoming',
+        status: task.tick ? 'done' : now >= task.deadline ? 'overdue' : 'upcoming',
       };
     });
 }

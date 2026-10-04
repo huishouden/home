@@ -9,6 +9,7 @@ import { eventAgenda, eventRef, prepAgenda, prepRef } from './events';
 import type { HomeData } from './demo';
 import type { TabId } from './tabs';
 import { dueState, isPaused } from './upkeep';
+import { t } from '../i18n';
 
 // What Home puts on the household agenda (households/{id}/agenda, read by the portal): each job's
 // next due date, visits booked ahead, warranties ending, and regular events (each occurrence of the
@@ -87,7 +88,7 @@ export function warrantyAgenda(w: Warranty, now: number): AgendaEntry[] {
     [
       {
         kind: 'renewal',
-        title: `${w.item} warranty ends`,
+        title: t('agenda.warrantyEnds', { item: w.item }),
         start: allDayStart(w.warrantyEnd),
         allDay: true,
         detail: w.details,

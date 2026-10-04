@@ -6,7 +6,8 @@ import { CalendarSync, Contact as ContactIcon, History as HistoryIcon, House, Re
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import { isImported, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
-import { clockWords } from '@huishouden/pwa-kit/time';
+import { atClock } from '@huishouden/pwa-kit/time';
+import { useT } from './i18n';
 import { describeRule, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import { SuggestionsCard } from '@huishouden/pwa-kit/react/suggestions';
 import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
@@ -22,8 +23,8 @@ import { WarrantyDialog } from './components/WarrantyDialog';
 import { EventDialog } from './components/EventDialog';
 import { OccurrenceDialog } from './components/OccurrenceDialog';
 import { fromSeries, hasEventNamed, prepTasks, splitRegular, type PrepOffer, type PrepTask } from './lib/events';
-import { APP, ROLES } from './lib/contacts';
-import { CALENDAR_WORDS, fromCalendar } from './lib/calendarImport';
+import { APP, ROLES, roleLabel } from './lib/contacts';
+import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
 import { tabFromHash } from './lib/tabs';
 import { Overview, type TabId } from './screens/Overview';
@@ -49,13 +50,13 @@ interface Props {
 }
 
 // On phones the four primaries sit in the bottom bar; Warranties and Contacts are under More.
-const TABS: Tab[] = [
-  { id: 'overview', label: 'Overview', icon: House, primary: true },
-  { id: 'upkeep', label: 'Upkeep', icon: Wrench, primary: true },
-  { id: 'regular', label: 'Regular', icon: Repeat, primary: true },
-  { id: 'history', label: 'History', icon: HistoryIcon, primary: true },
-  { id: 'warranties', label: 'Warranties', icon: ShieldCheck },
-  { id: 'contacts', label: 'Contacts', icon: ContactIcon },
+const tabs = (t: ReturnType<typeof useT>): Tab[] => [
+  { id: 'overview', label: t('tab.overview'), icon: House, primary: true },
+  { id: 'upkeep', label: t('tab.upkeep'), icon: Wrench, primary: true },
+  { id: 'regular', label: t('tab.regular'), icon: Repeat, primary: true },
+  { id: 'history', label: t('tab.history'), icon: HistoryIcon, primary: true },
+  { id: 'warranties', label: t('tab.warranties'), icon: ShieldCheck },
+  { id: 'contacts', label: t('tab.contacts'), icon: ContactIcon },
 ];
 
 /** A "Looks regular" offer: a new regular event, or (with `prep`) the thing to do before one the household has. */
@@ -65,6 +66,7 @@ type Editing<T> = { item: T | null; initial?: Partial<ServiceInput> } | null;
 
 /** Everything inside the frame once there is data to show (live or sample). */
 export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, role }: Props) {
+  const t = useT();
   const { now, read } = useClock();
   const today = toYmd(now);
   // Agenda links open a screen: #upkeep, #history, #warranties.
@@ -79,7 +81,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const { data, actions } = store;
   const suggested = useCalendarSuggestions({
     auth,
-    words: CALENDAR_WORDS,
+    words: calendarWords(),
     // Occurrences of a regular event the household already has are not new.
     isImported: (m) => isImported(m, data.log) || hasEventNamed(data.events, m.title),
     app: 'Home',
@@ -92,19 +94,19 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const prep = prepTasks(data.events, data.prep, now);
 
   /** Ticks the thing to do before off, or (when done) undoes it; a tick comes with Undo. */
-  const togglePrep = (t: PrepTask) => {
-    if (t.tick) {
-      actions.untickPrep(t.event, t.occurrence.original);
+  const togglePrep = (p: PrepTask) => {
+    if (p.tick) {
+      actions.untickPrep(p.event, p.occurrence.original);
       return;
     }
-    actions.tickPrep(t.event, t.occurrence.original);
-    notify(`Done: ${t.prep.title}`, () => actions.untickPrep(t.event, t.occurrence.original));
+    actions.tickPrep(p.event, p.occurrence.original);
+    notify(t('toast.prepDone', { title: p.prep.title }), () => actions.untickPrep(p.event, p.occurrence.original));
   };
 
   /** Not needed this time: shown as skipped (tap to undo), with Undo. */
-  const skipPrep = (t: PrepTask) => {
-    actions.skipPrep(t.event, t.occurrence.original);
-    notify(`Skipped: ${t.prep.title}`, () => actions.untickPrep(t.event, t.occurrence.original));
+  const skipPrep = (p: PrepTask) => {
+    actions.skipPrep(p.event, p.occurrence.original);
+    notify(t('toast.prepSkipped', { title: p.prep.title }), () => actions.untickPrep(p.event, p.occurrence.original));
   };
 
 
@@ -112,7 +114,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   /** Calendar events into the history as visits: Import from calendar and the new-in-your-calendar card. */
   const importEvents = (list: CalendarMatch[]) => {
     for (const m of list) actions.saveEntry(null, fromCalendar(m, data.tasks, data.events));
-    notify(list.length === 1 ? `Added ${list[0].title}` : `Added ${list.length} visits`);
+    notify(list.length === 1 ? t('common.added', { name: list[0].title }) : t('toast.addedVisits', { count: list.length }));
   };
 
   // Opened from the Share menu with a contact card (Contacts → Share → Home): a new contact, filled in.
@@ -126,13 +128,13 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   }, []);
 
   useEffect(() => {
-    document.title = 'Huishouden Home';
+    document.title = t('app.documentTitle');
     const follow = () => {
       if (window.location.hash) setTab(tabFromHash(window.location.hash));
     };
     window.addEventListener('hashchange', follow);
     return () => window.removeEventListener('hashchange', follow);
-  }, []);
+  }, [t]);
 
   // A helper or kid opening someone else's record is told who can change it rather than given a form.
   const open =
@@ -140,21 +142,21 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     (item: T) =>
       mayChange(store, item) ? show(item) : notify(refusal('edit-others'));
 
-  const markDone = (t: HomeTask) => {
+  const markDone = (task: HomeTask) => {
     const doneOn = toYmd(read());
-    const { entryId, next } = actions.markDone(t, doneOn);
-    notify(`Done: ${t.title}. Next due ${shortDate(next, doneOn)}.`, () => actions.undoDone(t, entryId));
+    const { entryId, next } = actions.markDone(task, doneOn);
+    notify(t('toast.jobDone', { title: task.title, date: shortDate(next, doneOn) }), () => actions.undoDone(task, entryId));
   };
 
-  const resumeTask = (t: HomeTask) => {
-    actions.resumeTask(t);
-    notify(`Resumed ${t.title}`, () => actions.restoreTask(t));
+  const resumeTask = (task: HomeTask) => {
+    actions.resumeTask(task);
+    notify(t('toast.resumed', { title: task.title }), () => actions.restoreTask(task));
   };
 
   let content: ReactNode;
-  if (!store.ready) content = <p className="p-2 text-lg text-muted">Loading the house</p>;
+  if (!store.ready) content = <p className="p-2 text-lg text-muted">{t('app.loading')}</p>;
   else if (tab === 'upkeep')
-    content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((t: HomeTask) => setTask({ item: t }))} onDone={markDone} onResume={resumeTask} />;
+    content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((x: HomeTask) => setTask({ item: x }))} onDone={markDone} onResume={resumeTask} />;
   else if (tab === 'history')
     content = (
       <History
@@ -187,7 +189,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         store={store}
         today={today}
         onDone={markDone}
-        onEditTask={open((t: HomeTask) => setTask({ item: t }))}
+        onEditTask={open((x: HomeTask) => setTask({ item: x }))}
         onAddTask={() => setTask({ item: null })}
         onEditEntry={open((e: ServiceEntry) => setEntry({ item: e }))}
         onEditWarranty={open((w: Warranty) => setWarranty({ item: w }))}
@@ -202,7 +204,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
 
   return (
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased lg:h-dvh lg:overflow-hidden">
-      <Header tabs={TABS} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
+      <Header tabs={tabs(t)} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
       <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
         {banner}
         {tab === 'overview' && store.ready && (
@@ -211,12 +213,15 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
               suggestions={regularOffers}
               idOf={(o) => o.series.key}
               titleOf={(o) => o.series.title}
-              detailOf={({ series: s, prep: p }) => `${describeRule(s.rule)}${s.time ? ` at ${clockWords(s.time)}` : ''}${p ? ` · before ${p.event.title}` : ''}`}
-              lead="Looks regular"
-              label="Regular events in your calendar"
-              moreLabel="More regular events in your calendar"
+              detailOf={({ series: s, prep: p }) => {
+                const rule = s.time ? t('regular.ruleAt', { rule: describeRule(s.rule), at: atClock(s.time) }) : describeRule(s.rule);
+                return p ? t('suggest.ruleBefore', { rule, event: p.event.title }) : rule;
+              }}
+              lead={t('suggest.lead')}
+              label={t('suggest.label')}
+              moreLabel={t('suggest.more')}
               icon={<CalendarSync size={20} className="shrink-0 text-link" aria-hidden="true" />}
-              addAs={({ series: s, prep: p }) => (p ? { label: 'Use as prep', ariaLabel: `Use ${s.title} as prep for ${p.event.title}` } : null)}
+              addAs={({ series: s, prep: p }) => (p ? { label: t('suggest.usePrep'), ariaLabel: t('suggest.usePrepFor', { title: s.title, event: p.event.title }) } : null)}
               onAdd={({ series: s, prep: p }) => setRegular(p ? { item: p.event, initial: { prep: p.prep } } : { item: null, initial: fromSeries(s) })}
               onDismiss={(o) => o.series.matches.forEach(suggested.dismiss)}
             />
@@ -235,14 +240,14 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           onClose={() => setTask(null)}
           onSave={(input) => {
             actions.saveTask(task.item?.id ?? null, input);
-            if (!task.item) notify(`Added ${input.title.trim()}`);
+            if (!task.item) notify(t('common.added', { name: input.title.trim() }));
           }}
           onDelete={
             task.item
               ? () => {
                   const gone = task.item!;
                   actions.deleteTask(gone.id);
-                  notify(`Deleted ${gone.title}`, () => actions.restoreTask(gone));
+                  notify(t('common.deleted', { name: gone.title }), () => actions.restoreTask(gone));
                 }
               : undefined
           }
@@ -251,7 +256,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
               ? () => {
                   const was = task.item!;
                   actions.pauseTask(was);
-                  notify(`Paused ${was.title}. It won't come due until resumed.`, () => actions.restoreTask(was));
+                  notify(t('toast.paused', { title: was.title }), () => actions.restoreTask(was));
                 }
               : undefined
           }
@@ -268,14 +273,14 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           onClose={() => setEntry(null)}
           onSave={(input) => {
             actions.saveEntry(entry.item?.id ?? null, input);
-            if (!entry.item) notify(`Added ${input.title.trim()}`);
+            if (!entry.item) notify(t('common.added', { name: input.title.trim() }));
           }}
           onDelete={
             entry.item
               ? () => {
                   const gone = entry.item!;
                   actions.deleteEntry(gone.id);
-                  notify(`Deleted ${gone.title}`, () => actions.restoreEntry(gone));
+                  notify(t('common.deleted', { name: gone.title }), () => actions.restoreEntry(gone));
                 }
               : undefined
           }
@@ -289,14 +294,14 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           onClose={() => setWarranty(null)}
           onSave={(input) => {
             actions.saveWarranty(warranty.item?.id ?? null, input);
-            if (!warranty.item) notify(`Added ${input.item.trim()}`);
+            if (!warranty.item) notify(t('common.added', { name: input.item.trim() }));
           }}
           onDelete={
             warranty.item
               ? () => {
                   const gone = warranty.item!;
                   actions.deleteWarranty(gone.id);
-                  notify(`Deleted ${gone.item}`, () => actions.restoreWarranty(gone));
+                  notify(t('common.deleted', { name: gone.item }), () => actions.restoreWarranty(gone));
                 }
               : undefined
           }
@@ -311,15 +316,15 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           onClose={() => setRegular(null)}
           onSave={(input) => {
             actions.saveEvent(regular.item?.id ?? null, input);
-            if (!regular.item) notify(`Added ${input.title.trim()}`);
-            else if (regular.initial?.prep && input.prep) notify(`${input.prep.title.trim()} before ${input.title.trim()}`);
+            if (!regular.item) notify(t('common.added', { name: input.title.trim() }));
+            else if (regular.initial?.prep && input.prep) notify(t('toast.prepBefore', { prep: input.prep.title.trim(), event: input.title.trim() }));
           }}
           onDelete={
             regular.item
               ? () => {
                   const gone = regular.item!;
                   actions.deleteEvent(gone.id);
-                  notify(`Deleted ${gone.title}`, () => actions.restoreEvent(gone));
+                  notify(t('common.deleted', { name: gone.title }), () => actions.restoreEvent(gone));
                 }
               : undefined
           }
@@ -338,7 +343,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
             actions.changeOccurrence(event, o.original, change);
             // Undo writes back what this occurrence had before, on the event as it was.
             const restore = () => actions.changeOccurrence(event, o.original, event.exceptions?.[o.original] ?? null);
-            notify(change?.skipped ? `Skipped ${event.title} this time` : change ? `Moved ${event.title}` : `${event.title} is back on its usual day`, restore);
+            notify(change?.skipped ? t('toast.skippedOnce', { title: event.title }) : change ? t('toast.moved', { title: event.title }) : t('toast.backOnDay', { title: event.title }), restore);
           }}
         />
       )}
@@ -347,21 +352,22 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
           contact={contact.item}
           app={APP}
           roles={ROLES}
-          namePlaceholder="Example Lawn Care"
+          roleLabel={roleLabel}
+          namePlaceholder={t('contacts.namePlaceholder')}
           auth={auth}
           sharedContacts={contact.shared}
           canMarkPrivate={!role || role.can('see-private')}
           onClose={() => setContact(null)}
           onSave={(input) => {
             actions.saveContact(contact.item?.id ?? null, input);
-            if (!contact.item) notify(`Added ${input.name}`);
+            if (!contact.item) notify(t('common.added', { name: input.name }));
           }}
           onDelete={
             contact.item
               ? () => {
                   const gone = contact.item!;
                   actions.deleteContact(gone.id);
-                  notify(`Deleted ${gone.name}`, () => actions.restoreContact(gone));
+                  notify(t('common.deleted', { name: gone.name }), () => actions.restoreContact(gone));
                 }
               : undefined
           }

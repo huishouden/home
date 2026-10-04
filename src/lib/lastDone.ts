@@ -1,5 +1,6 @@
 import type { LastDone, Schedule } from '@huishouden/pwa-kit/schedule';
 import { daysBetween, isYmd, type Ymd } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 // The job dialog's "When was it last done?": a new job is not assumed done. Not done yet means it
 // needs doing now (after-done) or on its next date (fixed); "It's overdue" puts a fixed job on the
@@ -11,15 +12,15 @@ export type LastDoneChoice = 'not-yet' | 'overdue' | 'today' | 'date';
 export function lastDoneChoices(kind: Schedule['kind']): { value: LastDoneChoice; label: string }[] {
   return kind === 'after-done'
     ? [
-        { value: 'not-yet', label: "Not done yet, it's due now" },
-        { value: 'today', label: 'Today' },
-        { value: 'date', label: 'On a date' },
+        { value: 'not-yet', label: t('lastDone.notYetDueNow') },
+        { value: 'today', label: t('lastDone.today') },
+        { value: 'date', label: t('lastDone.onDate') },
       ]
     : [
-        { value: 'not-yet', label: 'Not done yet' },
-        { value: 'overdue', label: "It's overdue" },
-        { value: 'today', label: 'Today' },
-        { value: 'date', label: 'On a date' },
+        { value: 'not-yet', label: t('lastDone.notYet') },
+        { value: 'overdue', label: t('lastDone.overdue') },
+        { value: 'today', label: t('lastDone.today') },
+        { value: 'date', label: t('lastDone.onDate') },
       ];
 }
 

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { CalendarArrowUp, CalendarX2, Pencil, Undo2 } from 'lucide-react';
 import { MAX_MOVE_DAYS, NOTE_MAX, type Occurrence, type OccurrenceChange } from '@huishouden/pwa-kit/schedule';
-import { addDays, clockWords, isHhmm, isYmd, longDate, type Ymd } from '@huishouden/pwa-kit/time';
+import { addDays, atClock, isHhmm, isYmd, longDate, type Ymd } from '@huishouden/pwa-kit/time';
+import { capitalize } from '@huishouden/pwa-kit/i18n';
+import { useT } from '../i18n';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import type { HomeEvent } from '../lib/model';
@@ -21,6 +23,7 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
   onEditSchedule: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [moving, setMoving] = useState(false);
   const [date, setDate] = useState<Ymd>(occurrence.date);
   const [time, setTime] = useState(occurrence.time ?? '');
@@ -42,14 +45,13 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
       <div className="space-y-4">
         <div className="text-lg text-ink">
           {o.skipped ? (
-            <p className="font-semibold">Skipped this time</p>
+            <p className="font-semibold">{t('occurrenceDialog.skipped')}</p>
           ) : (
             <p className="font-semibold">
-              {longDate(o.date, today)}
-              {o.time ? ` at ${clockWords(o.time)}` : ''}
+              {o.time ? t('occurrenceDialog.dateAt', { date: capitalize(longDate(o.date, today)), at: atClock(o.time) }) : capitalize(longDate(o.date, today))}
             </p>
           )}
-          {o.moved && <p className="text-base text-muted">Moved from {fromWords(o.original, today)}</p>}
+          {o.moved && <p className="text-base text-muted">{t('events.movedFrom', { date: fromWords(o.original, today) })}</p>}
           {o.note && <p className="text-base text-muted">{o.note}</p>}
         </div>
 
@@ -64,22 +66,22 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
             }}
           >
             <div className="flex flex-wrap gap-3">
-              <Field label="New day">
+              <Field label={t('occurrenceDialog.newDay')}>
                 <input className={`${inputClass} w-auto`} type="date" min={min} max={max} value={date} onChange={(e) => setDate(e.target.value)} />
               </Field>
-              <Field label="At (optional)">
+              <Field label={t('form.atOptional')}>
                 <input className={`${inputClass} w-auto`} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </Field>
             </div>
-            <Field label="Why (optional)">
-              <input className={inputClass} maxLength={NOTE_MAX} value={note} placeholder="Holiday week" onChange={(e) => setNote(e.target.value)} />
+            <Field label={t('occurrenceDialog.why')}>
+              <input className={inputClass} maxLength={NOTE_MAX} value={note} placeholder={t('occurrenceDialog.whyPlaceholder')} onChange={(e) => setNote(e.target.value)} />
             </Field>
             <div className="flex justify-end gap-2">
               <button type="button" className={ghostButton} onClick={() => setMoving(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="submit" className={primaryButton} disabled={!moveOk}>
-                Move it
+                {t('occurrenceDialog.moveIt')}
               </button>
             </div>
           </form>
@@ -87,17 +89,17 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
           <div className="flex flex-col gap-2">
             {changed && (
               <button type="button" className={`${secondaryButton} justify-start`} onClick={() => done(null)}>
-                <Undo2 size={20} /> {o.skipped ? 'Put it back' : `Back to ${fromWords(o.original, today)}`}
+                <Undo2 size={20} /> {o.skipped ? t('occurrenceDialog.putBack') : t('occurrenceDialog.backTo', { date: fromWords(o.original, today) })}
               </button>
             )}
             {!o.skipped && (
               <button type="button" className={`${secondaryButton} justify-start`} onClick={() => setMoving(true)}>
-                <CalendarArrowUp size={20} /> Move this one
+                <CalendarArrowUp size={20} /> {t('occurrenceDialog.move')}
               </button>
             )}
             {!o.skipped && (
               <button type="button" className={`${secondaryButton} justify-start`} onClick={() => done({ skipped: true, ...(o.note ? { note: o.note } : {}) })}>
-                <CalendarX2 size={20} /> Skip this one
+                <CalendarX2 size={20} /> {t('occurrenceDialog.skip')}
               </button>
             )}
             <button
@@ -108,7 +110,7 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
                 onEditSchedule();
               }}
             >
-              <Pencil size={20} /> Edit the schedule
+              <Pencil size={20} /> {t('eventDialog.titleEdit')}
             </button>
           </div>
         )}

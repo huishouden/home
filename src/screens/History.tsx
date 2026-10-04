@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { CalendarArrowDown, ExternalLink, Pencil, Plus, Repeat } from 'lucide-react';
 import type { ServiceEntry } from '../lib/model';
-import { CALENDAR_WORDS } from '../lib/calendarImport';
+import { calendarWords } from '../lib/calendarImport';
+import { useT } from '../i18n';
+import { capitalize } from '@huishouden/pwa-kit/i18n';
 import { splitRegular } from '../lib/events';
 import { describeRule } from '@huishouden/pwa-kit/schedule';
-import { clockWords } from '@huishouden/pwa-kit/time';
+import { atClock } from '@huishouden/pwa-kit/time';
 import type { CalendarMatch, CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { formatCents } from '@huishouden/pwa-kit/money';
 import { daysBetween, longDate, type Ymd, ymdParts } from '@huishouden/pwa-kit/time';
@@ -27,13 +29,14 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
   /** Opens a new regular event from a repeating calendar series (garbage pickup every Thursday). */
   onMakeRegular: (series: CalendarSeries) => void;
 }) {
+  const t = useT();
   const [importing, setImporting] = useState(false);
   const scan = useCalendarSearch(auth, 'Home');
   const { log } = store.data;
   const booked = log.filter((e) => daysBetween(today, e.date) > 0).sort((a, b) => daysBetween(b.date, a.date));
   const done = log.filter((e) => daysBetween(today, e.date) <= 0).sort((a, b) => daysBetween(a.date, b.date) || b.createdAt - a.createdAt);
   const years = [...new Set(done.map((e) => ymdParts(e.date)!.y))].sort((a, b) => b - a);
-  const runScan = () => void scan.run(CALENDAR_WORDS, { limit: 50 });
+  const runScan = () => void scan.run(calendarWords(), { limit: 50 });
   // Repeating pickups and lawn services are offered as one regular event each, not as visits.
   const split = scan.state.status === 'done' ? splitRegular(scan.state.matches, store.data.events) : null;
   const visitsState = split ? { status: 'done' as const, matches: split.visits } : scan.state;
@@ -42,7 +45,7 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
     <div className="mx-auto max-w-4xl space-y-6 lg:h-full lg:overflow-y-auto">
       <div>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h2 className="text-2xl font-semibold text-ink">History</h2>
+          <h2 className="text-2xl font-semibold text-ink">{t('tab.history')}</h2>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -54,22 +57,22 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
                 runScan();
               }}
             >
-              <CalendarArrowDown size={20} /> Import from calendar
+              <CalendarArrowDown size={20} /> {t('history.import')}
             </button>
             <button type="button" className={primaryButton} onClick={onAdd}>
-              <Plus size={20} /> Add entry
+              <Plus size={20} /> {t('history.addEntry')}
             </button>
           </div>
         </div>
         <div className="mt-1 flex justify-end text-right">
-          <CalendarHint app="Home" available={calendarAvailable} />
+          <CalendarHint app="Home" name={t('app.name')} available={calendarAvailable} />
         </div>
       </div>
       {store.helping && <RoleNote action="edit-others" />}
 
       {booked.length > 0 && (
-        <section aria-label="Booked visits">
-          <h3 className={`${overline} mb-2`}>Booked</h3>
+        <section aria-label={t('history.bookedVisits')}>
+          <h3 className={`${overline} mb-2`}>{t('history.booked')}</h3>
           <ul className={cardClass}>
             {booked.map((e, i) => (
               <Entry key={e.id} entry={e} today={today} store={store} strong={i === 0} onEdit={() => onEdit(e)} />
@@ -79,18 +82,18 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
       )}
 
       {done.length === 0 && booked.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-muted`}>Nothing in the history yet. Marking an upkeep job done adds it here, or add a visit by hand.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>{t('history.empty')}</p>
       )}
 
       {years.map((y) => {
         const entries = done.filter((e) => e.date.startsWith(`${y}-`));
         const total = entries.reduce((s, e) => s + (e.costCents ?? 0), 0);
         return (
-          <section key={y} aria-label={`Done in ${y}`}>
+          <section key={y} aria-label={t('history.doneIn', { year: String(y) })}>
             <div className="mb-2 flex items-baseline justify-between gap-4">
               <h3 className={overline}>{y}</h3>
               <p className="text-base text-muted">
-                Spent <span className="font-semibold text-ink tabular-nums">{formatCents(total)}</span>
+                {t('history.spent')} <span className="font-semibold text-ink tabular-nums">{formatCents(total)}</span>
               </p>
             </div>
             <ul className={cardClass}>
@@ -105,9 +108,9 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
       {importing && (
         <CalendarImportDialog
           state={visitsState}
-          intro="Pest control, lawn, HVAC, plumber, electrician, inspection, gutter, roof and pool visits from last week to a year ahead, and garbage, recycling and lawn days that repeat."
-          noneFound="No house visits found in your calendars."
-          allImported="Every house visit in your calendar is already in Home."
+          intro={t('history.importIntro')}
+          noneFound={t('history.importNone')}
+          allImported={t('history.importAll')}
           records={log}
           onRetry={runScan}
           onAdd={onImport}
@@ -117,14 +120,13 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
           }}
         >
           {split && split.offers.length > 0 && (
-            <ul className="mt-4 divide-y divide-line rounded-2xl border border-forest-200 bg-tint dark:border-forest-600" aria-label="Regular events">
+            <ul className="mt-4 divide-y divide-line rounded-2xl border border-forest-200 bg-tint dark:border-forest-600" aria-label={t('regular.title')}>
               {split.offers.map((o) => (
                 <li key={o.key} className="flex items-center gap-3 px-3 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-ink [overflow-wrap:anywhere]">{o.title}</p>
                     <p className="text-sm text-muted">
-                      Looks regular: {describeRule(o.rule)}
-                      {o.time ? ` at ${clockWords(o.time)}` : ''}
+                      {t('history.looksRegular', { rule: o.time ? t('regular.ruleAt', { rule: describeRule(o.rule), at: atClock(o.time) }) : describeRule(o.rule) })}
                     </p>
                   </div>
                   <button
@@ -135,9 +137,9 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
                       scan.reset();
                       onMakeRegular(o);
                     }}
-                    aria-label={`Make ${o.title} a regular event`}
+                    aria-label={t('history.makeRegularName', { name: o.title })}
                   >
-                    <Repeat size={18} /> Make it regular
+                    <Repeat size={18} /> {t('history.makeRegular')}
                   </button>
                 </li>
               ))}
@@ -150,6 +152,7 @@ export function History({ store, today, calendarAvailable, onAdd, onEdit, onImpo
 }
 
 function Entry({ entry: e, today, store, strong, onEdit }: { entry: ServiceEntry; today: Ymd; store: HomeStore; strong?: boolean; onEdit: () => void }) {
+  const t = useT();
   const contact = e.contactId ? store.data.contacts.find((c) => c.id === e.contactId) : undefined;
   return (
     <li className="flex items-start gap-4 border-b border-line p-4 last:border-b-0 sm:gap-5 sm:p-5" aria-label={`${e.title}, ${longDate(e.date, today)}`}>
@@ -159,17 +162,17 @@ function Entry({ entry: e, today, store, strong, onEdit }: { entry: ServiceEntry
           <p className="text-xl font-semibold text-ink">{e.title}</p>
           {e.costCents !== undefined && <p className="text-lg font-semibold text-ink tabular-nums">{formatCents(e.costCents)}</p>}
         </div>
-        <p className="text-base text-muted">{longDate(e.date, today)}</p>
+        <p className="text-base text-muted">{capitalize(longDate(e.date, today))}</p>
         <WhoLine contact={contact} who={e.who} compact />
         {e.notes && <p className="mt-0.5 text-base whitespace-pre-line text-muted">{e.notes}</p>}
         {e.calendarLink && (
           <a className={linkClass} href={e.calendarLink} target="_blank" rel="noopener noreferrer">
-            <ExternalLink size={16} aria-hidden="true" /> Open in Calendar
+            <ExternalLink size={16} aria-hidden="true" /> {t('history.openCalendar')}
           </a>
         )}
       </div>
       {mayChange(store, e) && (
-        <button type="button" className={iconButton} onClick={onEdit} aria-label={`Edit ${e.title}`}>
+        <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: e.title })}>
           <Pencil size={18} />
         </button>
       )}
