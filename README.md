@@ -156,3 +156,10 @@ Built on [huishouden-pwa-kit](https://github.com/huishouden/pwa-kit) and follows
 [design language](https://github.com/huishouden/pwa-kit/blob/main/DESIGN.md) and
 [standard](https://github.com/huishouden/pwa-kit/blob/main/STANDARD.md). Pushes to `main` deploy to
 Firebase Hosting (project `huishouden-piekstra`, site `huishouden-home`), then run the smoke tests and refresh the screenshots.
+
+## License
+
+Source available under [PolyForm Shield 1.0.0](LICENSE): you may use, study and modify this code
+for any purpose except providing a product that competes with Huishouden.
+
+Huishouden and its logo are the project's brand; please don't use them for other products.
