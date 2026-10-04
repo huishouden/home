@@ -7,6 +7,8 @@ import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { WhoLine } from '../components/bits';
 import { cardClass, iconButton, linkClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
 import { useT } from '../i18n';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
+import { warrantyEntry } from '../lib/agenda';
 
 /** Appliances and systems with their warranty end, ending soonest first, and the receipt and manual one tap away. */
 export function Warranties({ store, today, onAdd, onEdit, notify }: {
@@ -43,6 +45,7 @@ export function Warranties({ store, today, onAdd, onEdit, notify }: {
                   <h3 className="text-xl font-semibold text-ink [overflow-wrap:anywhere]">{w.item}</h3>
                   {w.details && <p className="text-base text-muted [overflow-wrap:anywhere]">{w.details}</p>}
                 </div>
+                {w.warrantyEnd && w.warrantyEnd >= today && <AddToCalendar entry={warrantyEntry(w)!} compact />}
                 {mayChange(store, w) && (
                   <>
                     <button type="button" className={iconButton} onClick={() => onEdit(w)} aria-label={t('a11y.edit', { name: w.item })}>

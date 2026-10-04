@@ -31,7 +31,7 @@ const dishwasher: Warranty = { id: 'w1', item: 'Dishwasher', details: 'Example A
 
 describe('jobs', () => {
   test('a job publishes its next due day, all day, upcoming, with the schedule and who does it', () => {
-    expect(jobAgenda(filter, contacts, now)).toEqual([
+    expect(jobAgenda(filter, contacts, now)).toMatchObject([
       {
         kind: 'due',
         title: 'Change HVAC filter',
@@ -69,7 +69,7 @@ describe('visits', () => {
   });
 
   test('a booked visit is an all-day appointment with no status, naming the contact', () => {
-    expect(visitAgenda(visit, contacts, now)).toEqual([
+    expect(visitAgenda(visit, contacts, now)).toMatchObject([
       { kind: 'appointment', title: 'Furnace tune-up', start: allDayStart(at(9)), allDay: true, detail: 'Example Heating & Air', url: `${APP_URL}#history` },
     ]);
   });

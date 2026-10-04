@@ -14,7 +14,8 @@ import { mayChange, type HomeStore } from '../data/types';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { auth } from '../data/firebase';
 import { DateTile, WhoLine } from '../components/bits';
-import { CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
+import { AddToCalendar, CalendarHint, CalendarImportDialog, useCalendarSearch } from '@huishouden/pwa-kit/react/calendar';
+import { isBookedVisit, visitEntry } from '../lib/agenda';
 import { cardClass, iconButton, linkClass, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 /** The service history: booked visits ahead, then everything done, newest first, with what it cost. */
@@ -171,11 +172,14 @@ function Entry({ entry: e, today, store, strong, onEdit }: { entry: ServiceEntry
           </a>
         )}
       </div>
-      {mayChange(store, e) && (
-        <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: e.title })}>
-          <Pencil size={18} />
-        </button>
-      )}
+      <div className="flex shrink-0 items-center gap-1">
+        {isBookedVisit(e) && <AddToCalendar entry={visitEntry(e, store.data.contacts)} compact />}
+        {mayChange(store, e) && (
+          <button type="button" className={iconButton} onClick={onEdit} aria-label={t('a11y.edit', { name: e.title })}>
+            <Pencil size={18} />
+          </button>
+        )}
+      </div>
     </li>
   );
 }

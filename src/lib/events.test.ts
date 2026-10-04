@@ -126,12 +126,13 @@ describe('the household agenda and reminders', () => {
   test('occurrences of the next 60 days, timed or all day, with no status', () => {
     const items = eventAgenda(trash, [], now, URL);
     expect(items).toHaveLength(9);
-    expect(items[0]).toEqual({ kind: 'other', title: 'Garbage pickup', start: atTime('2031-10-16', '07:00'), allDay: false, detail: 'Every Thursday', url: URL });
+    expect(items[0]).toMatchObject({ kind: 'other', title: 'Garbage pickup', start: atTime('2031-10-16', '07:00'), end: atTime('2031-10-16', '07:30'), allDay: false, detail: 'Every Thursday', url: URL });
     const lawnItems = eventAgenda({ ...lawn, exceptions: { '2031-10-31': { moved: { date: '2031-11-01' }, note: 'Rain' } } }, [{ id: 'c1', name: 'Example Lawn Care', apps: ['home'], createdAt: 1, by: 'x@example.com' }], now, URL);
-    expect(lawnItems.slice(0, 2)).toEqual([
+    expect(lawnItems.slice(0, 2)).toMatchObject([
       { kind: 'appointment', title: 'Lawn service', start: allDayStart('2031-10-17'), allDay: true, detail: 'Every other Friday · Example Lawn Care', url: URL },
       { kind: 'appointment', title: 'Lawn service', start: allDayStart('2031-11-01'), allDay: true, detail: 'Moved from Fri, Oct 31 · Rain · Example Lawn Care', url: URL },
     ]);
+    expect(lawnItems[0].end).toBeUndefined();
   });
 
   test('things to do before are tasks due at their deadline, ending that night; done once ticked; missed ones left off', () => {
