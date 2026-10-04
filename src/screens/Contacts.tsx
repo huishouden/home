@@ -1,7 +1,8 @@
 import { UserPlus } from 'lucide-react';
 import { groupContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { ContactCard } from '@huishouden/pwa-kit/react/contacts';
-import { ROLES } from '../lib/contacts';
+import { ROLES, roleLabel } from '../lib/contacts';
+import { useT } from '../i18n';
 import { mayChange, type HomeStore } from '../data/types';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { cardClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
@@ -13,19 +14,20 @@ export function Contacts({ store, onAdd, onEdit, notify }: {
   onEdit: (c: Contact) => void;
   notify: (message: string, undo?: () => void) => void;
 }) {
-  const groups = groupContacts(store.data.contacts, ROLES);
+  const t = useT();
+  const groups = groupContacts(store.data.contacts, ROLES, roleLabel);
 
   return (
     <div className="space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-ink">Contacts</h2>
+        <h2 className="text-2xl font-semibold text-ink">{t('tab.contacts')}</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
-          <UserPlus size={20} /> Add contact
+          <UserPlus size={20} /> {t('contacts.add')}
         </button>
       </div>
       {store.helping && <RoleNote action="edit-others" />}
       {groups.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-muted`}>No service providers yet. Add the lawn service, pest control and plumber so their numbers are one tap away.</p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>{t('contacts.empty')}</p>
       )}
       <div className="grid items-start gap-6 md:grid-cols-2">
         {groups.flatMap((g) =>
@@ -33,13 +35,13 @@ export function Contacts({ store, onAdd, onEdit, notify }: {
             <ContactCard
               key={c.id}
               contact={c}
-              role={g.role}
+              role={roleLabel(g.role)}
               onEdit={mayChange(store, c) ? () => onEdit(c) : undefined}
               onDelete={
                 mayChange(store, c)
                   ? () => {
                       store.actions.deleteContact(c.id);
-                      notify(`Deleted ${c.name}`, () => store.actions.restoreContact(c));
+                      notify(t('common.deleted', { name: c.name }), () => store.actions.restoreContact(c));
                     }
                   : undefined
               }

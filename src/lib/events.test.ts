@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { allDayStart } from '@huishouden/pwa-kit/agenda';
 import { atTime } from '@huishouden/pwa-kit/time';
 import {
-  EVENT_PRESETS, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepTasks, withOccurrenceChange,
+  eventPresets, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepTasks, withOccurrenceChange,
 } from './events';
 import { eventDoc, type HomeEvent, type PrepTick } from './model';
 
@@ -88,11 +88,11 @@ describe('words', () => {
   });
 
   test('presets give valid events', () => {
-    for (const p of EVENT_PRESETS) {
+    for (const p of eventPresets()) {
       const doc = eventDoc({ title: p.title, kind: p.kind, rule: p.rule('2031-10-30'), time: p.time, prep: p.prep }, { by: 'sam@example.com', createdAt: 1 });
       expect(doc.title).toBe(p.title);
     }
-    expect(EVENT_PRESETS.find((p) => p.id === 'hoa')!.rule('2031-10-30')).toEqual({ freq: 'month', every: 1, start: '2031-10-30', nth: -1, weekday: 4 });
+    expect(eventPresets().find((p) => p.id === 'hoa')!.rule('2031-10-30')).toEqual({ freq: 'month', every: 1, start: '2031-10-30', nth: -1, weekday: 4 });
   });
 });
 

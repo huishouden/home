@@ -1,4 +1,5 @@
 import { SOON_DAYS, daysBetween, dueHeadline, dueText as kitDueText, formatSpan, type SpanOptions, type Ymd } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 // Due-date wording and ordering for the upkeep list, on the kit's time helpers. Home rounds months
 // to the nearest one ("Done 3 months ago" for 88 days). Pure: every function takes today.
@@ -26,13 +27,13 @@ export function needsAttention<T extends { due: Ymd; title: string }>(items: T[]
   return byDue(items.filter((i) => daysBetween(today, i.due) <= soonDays));
 }
 
-/** "Last done 3 months ago", "Done today", "Never done". */
+/** "Done 3 months ago", "Done today", "Not done yet". */
 export function lastDoneText(lastDone: Ymd | undefined, today: Ymd): string {
-  if (!lastDone) return 'Not done yet';
+  if (!lastDone) return t('upkeep.notDoneYet');
   const days = daysBetween(lastDone, today);
-  if (days <= 0) return 'Done today';
-  if (days === 1) return 'Done yesterday';
-  return `Done ${spanWords(days)} ago`;
+  if (days <= 0) return t('upkeep.doneToday');
+  if (days === 1) return t('upkeep.doneYesterday');
+  return t('upkeep.doneAgo', { span: spanWords(days) });
 }
 
 /** Paused: kept with its schedule, but not due anywhere (Overview, Upkeep's due groups, the agenda, the to-do list). */

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import { CATEGORIES, CATEGORY_LABELS, LIMITS, type Category, type HomeTask, type TaskInput } from '../lib/model';
+import { CATEGORIES, categoryLabel, LIMITS, type Category, type HomeTask, type TaskInput } from '../lib/model';
 import { MAX_EVERY, UNITS, describeSchedule, dueFromLastDone, type Schedule, type Unit } from '@huishouden/pwa-kit/schedule';
 import { guessCategory } from '../lib/calendarImport';
 import { initialLastDone, lastDoneChoices, savedLastDone, toLastDone, type LastDoneChoice } from '../lib/lastDone';
@@ -11,8 +11,10 @@ import { ContactSelect, DeleteButton } from './bits';
 import { auth } from '../data/firebase';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { Pause } from 'lucide-react';
+import { useT } from '../i18n';
 
-const UNIT_LABELS: Record<Unit, [string, string]> = { day: ['day', 'days'], week: ['week', 'weeks'], month: ['month', 'months'], year: ['year', 'years'] };
+// i18n-dynamic: unit.
+const UNIT_KEYS = { day: 'unit.day', week: 'unit.week', month: 'unit.month', year: 'unit.year' } as const satisfies Record<Unit, string>;
 
 /**
  * Add or edit a recurring upkeep job: what, how often, when it was last done, when next, who does
@@ -30,6 +32,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
   onPause?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const s = task?.schedule;
   const [title, setTitle] = useState(task?.title ?? '');
   const [category, setCategory] = useState<Category>(task?.category ?? 'other');
@@ -81,7 +84,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
 
   return (
     <Dialog
-      title={task ? 'Edit job' : 'New upkeep job'}
+      title={task ? t('taskDialog.titleEdit') : t('taskDialog.titleAdd')}
       onClose={onClose}
       footer={
         <>
@@ -102,14 +105,14 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
                 onClose();
               }}
             >
-              <Pause size={18} /> Pause
+              <Pause size={18} /> {t('taskDialog.pause')}
             </button>
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -121,19 +124,19 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
           save();
         }}
       >
-        <Field label="What">
+        <Field label={t('form.what')}>
           <input
             className={inputClass}
             value={title}
             maxLength={LIMITS.title}
-            placeholder="Change HVAC filter"
+            placeholder={t('taskDialog.titlePlaceholder')}
             onChange={(e) => {
               setTitle(e.target.value);
               if (!categoryTouched) setCategory(guessCategory(e.target.value) ?? 'other');
             }}
           />
         </Field>
-        <Field label="Kind">
+        <Field label={t('form.kind')}>
           <select
             className={inputClass}
             value={category}
@@ -144,14 +147,14 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {CATEGORY_LABELS[c]}
+                {categoryLabel(c)}
               </option>
             ))}
           </select>
         </Field>
 
         <fieldset className="space-y-3 rounded-2xl border border-line p-4">
-          <legend className="px-1 text-sm font-medium text-ink-soft">Repeats</legend>
+          <legend className="px-1 text-sm font-medium text-ink-soft">{t('taskDialog.repeats')}</legend>
           <div className="flex flex-wrap gap-2">
             <Chip
               active={kind === 'after-done'}
@@ -161,7 +164,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
                 rescheduled('after-done');
               }}
             >
-              Counted from when it's done
+              {t('taskDialog.afterDone')}
             </Chip>
             <Chip
               active={kind === 'fixed'}
@@ -170,18 +173,18 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
                 rescheduled('fixed');
               }}
             >
-              On set dates
+              {t('taskDialog.fixed')}
             </Chip>
           </div>
           <div className="flex items-end gap-2">
-            <span className="pb-3 text-base text-ink-soft">Every</span>
+            <span className="pb-3 text-base text-ink-soft">{t('taskDialog.every')}</span>
             <label className="w-20">
-              <span className="sr-only">How many</span>
+              <span className="sr-only">{t('taskDialog.howMany')}</span>
               <input
                 className={`${inputClass} tabular-nums`}
                 inputMode="numeric"
                 value={every}
-                aria-label="How many"
+                aria-label={t('taskDialog.howMany')}
                 onChange={(e) => {
                   setEvery(e.target.value.replace(/\D/g, '').slice(0, 2));
                   rescheduled();
@@ -189,11 +192,11 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
               />
             </label>
             <label className="flex-1">
-              <span className="sr-only">Unit</span>
+              <span className="sr-only">{t('taskDialog.unit')}</span>
               <select
                 className={inputClass}
                 value={unit}
-                aria-label="Unit"
+                aria-label={t('taskDialog.unit')}
                 onChange={(e) => {
                   setUnit(e.target.value as Unit);
                   rescheduled();
@@ -201,14 +204,14 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
               >
                 {UNITS.map((u) => (
                   <option key={u} value={u}>
-                    {UNIT_LABELS[u][n === 1 ? 0 : 1]}
+                    {t(UNIT_KEYS[u], { count: n })}
                   </option>
                 ))}
               </select>
             </label>
           </div>
           {kind === 'fixed' && (
-            <Field label="Starting on" hint={schedule ? `${describeSchedule(schedule)}.` : undefined}>
+            <Field label={t('taskDialog.startingOn')} hint={schedule ? `${describeSchedule(schedule)}.` : undefined}>
               <input
                 className={inputClass}
                 type="date"
@@ -223,7 +226,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
         </fieldset>
 
         <fieldset className="space-y-3 rounded-2xl border border-line p-4">
-          <legend className="px-1 text-sm font-medium text-ink-soft">When was it last done?</legend>
+          <legend className="px-1 text-sm font-medium text-ink-soft">{t('taskDialog.lastDoneQ')}</legend>
           <div className="flex flex-wrap gap-2">
             {lastDoneChoices(kind).map((c) => (
               <Chip key={c.value} active={choice === c.value || (c.value === 'not-yet' && choice === 'overdue' && kind === 'after-done')} onClick={() => answer(c.value)}>
@@ -232,7 +235,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
             ))}
           </div>
           {choice === 'date' && (
-            <Field label="Last done">
+            <Field label={t('taskDialog.lastDone')}>
               <input
                 className={inputClass}
                 type="date"
@@ -246,12 +249,12 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
             </Field>
           )}
           <Field
-            label="Next due"
+            label={t('taskDialog.nextDue')}
             hint={
               nextDue
-                ? `${dueText(nextDue, today)}, ${longDate(nextDue, today)}.${kind === 'after-done' ? ' After that, it counts from the day it is marked done.' : ''}`
+                ? `${t('taskDialog.nextDueHint', { due: dueText(nextDue, today), date: longDate(nextDue, today) })}${kind === 'after-done' ? ` ${t('taskDialog.afterThat')}` : ''}`
                 : choice === 'date'
-                  ? 'Pick the day it was last done.'
+                  ? t('taskDialog.pickLastDone')
                   : undefined
             }
           >
@@ -262,6 +265,7 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
         <CalendarFind
           auth={auth}
           app="Home"
+          name={t('app.name')}
           query={title}
           available={calendarAvailable}
           onPick={(m) => {
@@ -276,12 +280,12 @@ export function TaskDialog({ task, today, contacts, calendarAvailable, onSave, o
         {event && <LinkedEvent link={event.link} onUnlink={() => setEvent(null)} />}
 
         {(contacts.length > 0 || contactId) && (
-          <Field label="Who does it (optional)">
-            <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} empty="We do it ourselves" />
+          <Field label={t('taskDialog.who')}>
+            <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} empty={t('taskDialog.ourselves')} />
           </Field>
         )}
-        <Field label="Notes (optional)">
-          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Filter size, where the shut-off valve is" />
+        <Field label={t('form.notesOptional')}>
+          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('taskDialog.notesPlaceholder')} />
         </Field>
         <button type="submit" hidden />
       </form>

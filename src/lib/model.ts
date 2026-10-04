@@ -3,6 +3,7 @@ import {
 } from '@huishouden/pwa-kit/schedule';
 import { MAX_CENTS } from '@huishouden/pwa-kit/money';
 import { isHhmm, isYmd, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 // Firestore shapes under households/{householdId}. The project's rules accept exactly these keys,
 // so writers build documents with the functions below and never add fields.
@@ -10,19 +11,22 @@ import { isHhmm, isYmd, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
 export const CATEGORIES = ['hvac', 'pest', 'lawn', 'gutters', 'plumbing', 'electrical', 'appliances', 'safety', 'pool', 'paperwork', 'other'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  hvac: 'Heating and cooling',
-  pest: 'Pest control',
-  lawn: 'Lawn and garden',
-  gutters: 'Gutters and roof',
-  plumbing: 'Plumbing and water',
-  electrical: 'Electrical',
-  appliances: 'Appliances',
-  safety: 'Safety',
-  pool: 'Pool',
-  paperwork: 'Insurance and HOA',
-  other: 'Other',
-};
+const CATEGORY_KEYS = {
+  hvac: 'category.hvac',
+  pest: 'category.pest',
+  lawn: 'category.lawn',
+  gutters: 'category.gutters',
+  plumbing: 'category.plumbing',
+  electrical: 'category.electrical',
+  appliances: 'category.appliances',
+  safety: 'category.safety',
+  pool: 'category.pool',
+  paperwork: 'category.paperwork',
+  other: 'category.other',
+} as const satisfies Record<Category, string>;
+
+/** "Heating and cooling": a job's kind in the active language. */
+export const categoryLabel = (c: Category): string => t(CATEGORY_KEYS[c] ?? CATEGORY_KEYS.other);
 
 /** homeTasks/{id}: one recurring upkeep job. */
 export interface HomeTaskData {
@@ -92,15 +96,18 @@ export interface Warranty extends WarrantyData {
 export const EVENT_KINDS = ['trash', 'recycling', 'yard waste', 'lawn', 'hoa', 'cleaning', 'other'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
-export const EVENT_KIND_LABELS: Record<EventKind, string> = {
-  trash: 'Garbage',
-  recycling: 'Recycling',
-  'yard waste': 'Yard waste',
-  lawn: 'Lawn and garden',
-  hoa: 'HOA',
-  cleaning: 'Cleaning',
-  other: 'Other',
-};
+const EVENT_KIND_KEYS = {
+  trash: 'eventKind.trash',
+  recycling: 'eventKind.recycling',
+  'yard waste': 'eventKind.yardWaste',
+  lawn: 'eventKind.lawn',
+  hoa: 'eventKind.hoa',
+  cleaning: 'eventKind.cleaning',
+  other: 'eventKind.other',
+} as const satisfies Record<EventKind, string>;
+
+/** "Garbage": a regular event's kind in the active language. */
+export const eventKindLabel = (k: EventKind): string => t(EVENT_KIND_KEYS[k] ?? EVENT_KIND_KEYS.other);
 
 /**
  * homeEvents/{id}: something that comes and goes on a schedule without anyone completing it

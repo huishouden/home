@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
 import { commitOps } from '@huishouden/pwa-kit/firestore';
-import { removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
-import { syncReminders } from '@huishouden/pwa-kit/reminders';
-import { syncTodos } from '@huishouden/pwa-kit/todos';
+import { localizeAgenda, removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
+import { localizeReminders, syncReminders } from '@huishouden/pwa-kit/reminders';
+import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
+import { t } from '../i18n';
 import { todoItems } from '../lib/todos';
 import { householdContacts, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
 import { AGENDA_APP, APP_URL, agendaItems, jobAgenda, jobRef, screen, visitAgenda, visitRef, warrantyAgenda, warrantyRef, type AgendaEntry } from '../lib/agenda';
@@ -47,9 +48,9 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
   const base = `households/${householdId}`;
 
   useEffect(() => {
-    const fail = (what: string) => (e: Error) => errorRef.current(readError(e, `Couldn't load ${what}`));
+    const fail = (prefix: string) => (e: Error) => errorRef.current(readError(e, prefix));
     const answered = (name: string) => setLoaded((l) => (l.has(name) ? l : new Set(l).add(name)));
-    const list = <T,>(name: string, set: (items: T[]) => void, what: string, onFirst?: () => void, source: Query = collection(db, base, name)) =>
+    const list = <T,>(name: string, set: (items: T[]) => void, what: () => string, onFirst?: () => void, source: Query = collection(db, base, name)) =>
       onSnapshot(
         source,
         (s) => {
@@ -59,15 +60,15 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
         },
         (e) => {
           onFirst?.();
-          fail(what)(e);
+          fail(what())(e);
         },
       );
     const unsubs = [
-      list<HomeTask>(TASKS, setTasks, 'the upkeep list', () => setReady(true)),
-      list<ServiceEntry>(LOG, setLog, 'the history'),
-      list<Warranty>(WARRANTIES, setWarranties, 'the warranties'),
-      list<HomeEvent>(EVENTS, setEvents, 'the regular events'),
-      list<PrepTick>(PREP, setPrep, 'what was put out', undefined, query(collection(db, base, PREP), where('at', '>=', Date.now() - PREP_LOAD_DAYS * DAY))),
+      list<HomeTask>(TASKS, setTasks, () => t('live.loadTasks'), () => setReady(true)),
+      list<ServiceEntry>(LOG, setLog, () => t('live.loadHistory')),
+      list<Warranty>(WARRANTIES, setWarranties, () => t('live.loadWarranties')),
+      list<HomeEvent>(EVENTS, setEvents, () => t('live.loadEvents')),
+      list<PrepTick>(PREP, setPrep, () => t('live.loadPrep'), undefined, query(collection(db, base, PREP), where('at', '>=', Date.now() - PREP_LOAD_DAYS * DAY))),
       watchContacts(
         db,
         householdId,
@@ -75,7 +76,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           setContacts(c);
           answered('contacts');
         },
-        { app: APP, restricted, onError: fail('the contacts') },
+        { app: APP, restricted, onError: (e) => fail(t('live.loadContacts'))(e) },
       ),
     ];
     return () => unsubs.forEach((u) => u());
@@ -90,10 +91,15 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     if (!allLoaded || synced.current) return;
     synced.current = true;
     const now = Date.now();
-    syncAgenda(db, householdId, AGENDA_APP, agendaItems(current.current, now), { by: me, restricted, now }).catch((e) => console.warn("Couldn't update the household agenda", e));
+    // Every language's words, so each member reads the agenda, to-dos and reminders in their own.
+    localizeAgenda(() => agendaItems(current.current, now))
+      .then((items) => syncAgenda(db, householdId, AGENDA_APP, items, { by: me, restricted, now }))
+      .catch((e) => console.warn("Couldn't update the household agenda", e));
     // Reminders for the things to do before regular events, topped up for the next two weeks.
     const { events, prep } = current.current;
-    syncReminders(db, householdId, AGENDA_APP, prepReminders(events, prep, now, HOME_URL), me, now, { restricted }).catch((e) => console.warn("Couldn't schedule reminders", e));
+    localizeReminders(() => prepReminders(events, prep, now, HOME_URL))
+      .then((items) => syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted }))
+      .catch((e) => console.warn("Couldn't schedule reminders", e));
   }, [allLoaded, householdId, me, restricted]);
 
   // The household to-do list follows Home's data: on open, and a few seconds after any change
@@ -102,7 +108,11 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     if (!allLoaded) return;
     const timer = setTimeout(
       () => {
-        syncTodos(db, householdId, AGENDA_APP, todoItems(current.current, Date.now()), { by: me, restricted }).catch((e) => console.warn("Couldn't update the household to-do list", e));
+        const data = current.current;
+        const now = Date.now();
+        localizeTodos(() => todoItems(data, now))
+          .then((items) => syncTodos(db, householdId, AGENDA_APP, items, { by: me, restricted }))
+          .catch((e) => console.warn("Couldn't update the household to-do list", e));
       },
       todosSynced.current ? TODO_DELAY_MS : 0,
     );
@@ -113,9 +123,12 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
   const actions = useMemo<HomeActions>(() => {
     // The agenda follows each save; a failure there never fails the save (the next open repairs it).
     const warn = (e: unknown) => console.warn("Couldn't update the household agenda", e);
-    const publish = (ref: string, items: AgendaEntry[]) => void replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }).catch(warn);
+    const publish = (ref: string, build: () => AgendaEntry[]) =>
+      void localizeAgenda(build)
+        .then((items) => replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }))
+        .catch(warn);
     const unpublish = (ref: string) => void removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch(warn);
-    const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, "Couldn't save")));
+    const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, t('live.saveFailed'))));
 
     /** A record's agenda items, by ref, in `data`: none when it isn't there. */
     const itemsOf = (data: HomeData, col: DataKey, id: string, now: number): [string, AgendaEntry[]][] => {
@@ -156,13 +169,13 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           if (done.has(ref)) continue;
           done.add(ref);
           if (gone) unpublish(ref);
-          else if (items.length || was.get(ref)?.length) publish(ref, items);
+          else if (items.length || was.get(ref)?.length) publish(ref, () => new Map(itemsOf(after, op.col, op.id, now)).get(ref) ?? []);
         }
       }
       if (ops.some((op) => op.col === 'events' || op.col === 'prep'))
-        void syncReminders(db, householdId, AGENDA_APP, prepReminders(after.events, after.prep, now, HOME_URL), me, now, { restricted }).catch((e) =>
-          console.warn("Couldn't schedule reminders", e),
-        );
+        void localizeReminders(() => prepReminders(after.events, after.prep, now, HOME_URL))
+          .then((items) => syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted }))
+          .catch((e) => console.warn("Couldn't schedule reminders", e));
     };
 
     const contacts = householdContacts(db, householdId, APP, me, report);
@@ -182,12 +195,15 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           const d = current.current;
           const renamed = { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, name: input.name } : c)) };
           const now = Date.now();
-          const refs = [
-            ...d.tasks.filter((t) => t.contactId === id).map((t) => itemsOf(renamed, 'tasks', t.id, now)[0]),
-            ...d.log.filter((e) => e.contactId === id).map((e) => itemsOf(renamed, 'log', e.id, now)[0]),
-            ...d.events.filter((e) => e.contactId === id).map((e) => itemsOf(renamed, 'events', e.id, now)[0]),
+          const refs: [DataKey, string][] = [
+            ...d.tasks.filter((x) => x.contactId === id).map((x): [DataKey, string] => ['tasks', x.id]),
+            ...d.log.filter((x) => x.contactId === id).map((x): [DataKey, string] => ['log', x.id]),
+            ...d.events.filter((x) => x.contactId === id).map((x): [DataKey, string] => ['events', x.id]),
           ];
-          for (const [ref, items] of refs) publish(ref, items);
+          for (const [col, recordId] of refs) {
+            const [ref] = itemsOf(renamed, col, recordId, now)[0];
+            publish(ref, () => itemsOf(renamed, col, recordId, now)[0][1]);
+          }
         },
       },
     };

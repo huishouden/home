@@ -4,18 +4,10 @@ import { isEventRule, type EventPrep, type EventRule } from '@huishouden/pwa-kit
 import { PrepPicker, RulePicker } from '@huishouden/pwa-kit/react/schedule';
 import { isHhmm, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton, selectClass } from '@huishouden/pwa-kit/react/ui';
-import { EVENT_KINDS, EVENT_KIND_LABELS, LIMITS, type EventInput, type EventKind, type HomeEvent } from '../lib/model';
-import { EVENT_PRESETS, guessEventKind } from '../lib/events';
+import { EVENT_KINDS, eventKindLabel, LIMITS, type EventInput, type EventKind, type HomeEvent } from '../lib/model';
+import { eventPresets, guessEventKind, prepTitleFor } from '../lib/events';
+import { useT } from '../i18n';
 import { ContactSelect, DeleteButton } from './bits';
-
-/** What each kind usually needs doing before: the title a newly ticked "Something to do before" starts with. */
-const PREP_TITLES: Partial<Record<EventKind, string>> = {
-  trash: 'Take the garbage out',
-  recycling: 'Put the recycling out',
-  'yard waste': 'Put the yard waste out',
-  lawn: 'Unlock the side gate',
-  cleaning: 'Tidy up',
-};
 
 /**
  * Add or edit a regular event: what, how it repeats, at what time, who comes, and something to do
@@ -31,6 +23,8 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
+  const presets = eventPresets();
   const start = event ? { ...event, ...initial } : initial;
   const [title, setTitle] = useState(start?.title ?? '');
   const [kind, setKind] = useState<EventKind>(start?.kind ?? 'other');
@@ -60,7 +54,7 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
   };
 
   const usePreset = (id: string) => {
-    const p = EVENT_PRESETS.find((x) => x.id === id)!;
+    const p = presets.find((x) => x.id === id)!;
     setPreset(id);
     setTitle(p.title);
     setKind(p.kind);
@@ -72,7 +66,7 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
 
   return (
     <Dialog
-      title={event ? 'Edit the schedule' : 'New regular event'}
+      title={event ? t('eventDialog.titleEdit') : t('eventDialog.titleAdd')}
       onClose={onClose}
       footer={
         <>
@@ -85,10 +79,10 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
             />
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -101,27 +95,27 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
         }}
       >
         {!event && !initial && (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Start from">
-            {EVENT_PRESETS.map((p) => (
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('eventDialog.startFrom')}>
+            {presets.map((p) => (
               <Chip key={p.id} active={preset === p.id} onClick={() => usePreset(p.id)}>
                 {p.label}
               </Chip>
             ))}
           </div>
         )}
-        <Field label="What">
+        <Field label={t('form.what')}>
           <input
             className={inputClass}
             value={title}
             maxLength={LIMITS.title}
-            placeholder="Garbage pickup"
+            placeholder={t('preset.trashTitle')}
             onChange={(e) => {
               setTitle(e.target.value);
               if (!kindTouched) setKind(guessEventKind(e.target.value) ?? 'other');
             }}
           />
         </Field>
-        <Field label="Kind">
+        <Field label={t('form.kind')}>
           <select
             className={selectClass}
             value={kind}
@@ -132,7 +126,7 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
           >
             {EVENT_KINDS.map((k) => (
               <option key={k} value={k}>
-                {EVENT_KIND_LABELS[k]}
+                {eventKindLabel(k)}
               </option>
             ))}
           </select>
@@ -140,19 +134,19 @@ export function EventDialog({ event, initial, today, contacts, onSave, onDelete,
 
         <RulePicker rule={rule} onChange={setRule} today={today} />
 
-        <Field label="At (optional)" hint={time ? undefined : 'All day.'}>
+        <Field label={t('form.atOptional')} hint={time ? undefined : t('eventDialog.allDay')}>
           <input className={`${inputClass} w-auto`} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
 
-        <PrepPicker prep={prep} onChange={setPrep} suggestedTitle={PREP_TITLES[kind] ?? ''} />
+        <PrepPicker prep={prep} onChange={setPrep} suggestedTitle={prepTitleFor(kind)} />
 
         {(contacts.length > 0 || contactId) && (
-          <Field label="Who comes (optional)">
-            <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} empty="No one in particular" />
+          <Field label={t('eventDialog.who')}>
+            <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} />
           </Field>
         )}
-        <Field label="Notes (optional)">
-          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bins by the curb, lids closed" />
+        <Field label={t('form.notesOptional')}>
+          <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('eventDialog.notesPlaceholder')} />
         </Field>
         <button type="submit" hidden />
       </form>

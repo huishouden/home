@@ -9,6 +9,8 @@ import { CalendarFind, LinkedEvent } from '@huishouden/pwa-kit/react/calendar';
 import { ContactSelect, DeleteButton } from './bits';
 import { auth } from '../data/firebase';
 import { Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { compareText } from '@huishouden/pwa-kit/i18n';
+import { useT } from '../i18n';
 
 /** Add or edit a history entry: a visit or job on a day, who did it, what it cost. Future days are booked visits. */
 export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAvailable, onSave, onDelete, onClose }: {
@@ -23,6 +25,7 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const start = entry ?? initial;
   const [date, setDate] = useState<Ymd>(start?.date ?? today);
   const [title, setTitle] = useState(start?.title ?? '');
@@ -63,7 +66,7 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
 
   return (
     <Dialog
-      title={entry ? 'Edit entry' : 'Add to history'}
+      title={entry ? t('entryDialog.titleEdit') : t('entryDialog.titleAdd')}
       onClose={onClose}
       footer={
         <>
@@ -76,10 +79,10 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
             />
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -91,12 +94,13 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
           save();
         }}
       >
-        <Field label="What">
-          <input className={inputClass} value={title} maxLength={LIMITS.title} onChange={(e) => setTitle(e.target.value)} placeholder="Pest control visit" />
+        <Field label={t('form.what')}>
+          <input className={inputClass} value={title} maxLength={LIMITS.title} onChange={(e) => setTitle(e.target.value)} placeholder={t('entryDialog.titlePlaceholder')} />
         </Field>
         <CalendarFind
           auth={auth}
           app="Home"
+          name={t('app.name')}
           query={title}
           available={calendarAvailable}
           onPick={(m) => {
@@ -110,45 +114,40 @@ export function EntryDialog({ entry, initial, today, tasks, contacts, calendarAv
         />
         {event && <LinkedEvent link={event.link} onUnlink={() => setEvent(null)} />}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date" hint={booked ? 'A booked visit until then.' : undefined}>
+          <Field label={t('common.date')} hint={booked ? t('entryDialog.bookedHint') : undefined}>
             <input className={inputClass} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          <Field label="Cost (optional)" hint={costCents === null ? 'An amount like 95 or 95.50.' : undefined}>
-            <span className="relative block">
-              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" aria-hidden="true">
-                $
-              </span>
-              <input className={`${inputClass} pl-7 tabular-nums`} inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />
-            </span>
+          <Field label={t('entryDialog.cost')} hint={costCents === null ? t('entryDialog.costHint', { whole: '95', example: centsToInput(9550) }) : undefined}>
+            <input className={`${inputClass} tabular-nums`} type="text" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder={centsToInput(0)} />
           </Field>
         </div>
         {tasks.length > 0 && (
           <Field
-            label="Upkeep job (optional)"
-            hint={linkedTask && !entry && !booked ? `Saving marks ${linkedTask.title} done on this day, if it is the latest time.` : undefined}
+            label={t('entryDialog.job')}
+            hint={linkedTask && !entry && !booked ? t('entryDialog.jobHint', { name: linkedTask.title }) : undefined}
           >
             <select className={inputClass} value={taskId} onChange={(e) => pickTask(e.target.value)}>
-              <option value="">Not one of the upkeep jobs</option>
+              <option value="">{t('entryDialog.noJob')}</option>
               {[...tasks]
-                .sort((a, b) => a.title.localeCompare(b.title))
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title}
+                .sort((a, b) => compareText(a.title, b.title))
+                .map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title}
                   </option>
                 ))}
-              {taskId && !linkedTask && <option value={taskId}>A removed job</option>}
+              {taskId && !linkedTask && <option value={taskId}>{t('entryDialog.removedJob')}</option>}
             </select>
           </Field>
         )}
-        <Field label="Who">
-          <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} empty="Someone else, or ourselves" />
+        <Field label={t('entryDialog.who')}>
+          <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} empty={t('entryDialog.someoneElse')} />
         </Field>
         {!contactId && (
-          <Field label="Name (optional)">
-            <input className={inputClass} value={who} maxLength={LIMITS.who} onChange={(e) => setWho(e.target.value)} placeholder="We did it" />
+          <Field label={t('entryDialog.name')}>
+            <input className={inputClass} value={who} maxLength={LIMITS.who} onChange={(e) => setWho(e.target.value)} placeholder={t('entryDialog.namePlaceholder')} />
           </Field>
         )}
-        <Field label="Notes (optional)">
+        <Field label={t('form.notesOptional')}>
           <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
         <button type="submit" hidden />

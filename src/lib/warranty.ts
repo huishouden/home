@@ -1,5 +1,6 @@
 import { spanWords } from './upkeep';
 import { daysBetween, type Ymd } from '@huishouden/pwa-kit/time';
+import { t } from '../i18n';
 
 /** Warranties ending within this many days are highlighted. */
 export const EXPIRING_DAYS = 90;
@@ -16,12 +17,12 @@ export function warrantyState(end: Ymd | undefined, today: Ymd): { state: Warran
 /** "Expires in 46 days", "Expires today", "Expires in 7 months", "Expired 3 months ago", "No warranty date". */
 export function warrantyText(end: Ymd | undefined, today: Ymd): string {
   const { days } = warrantyState(end, today);
-  if (days === null) return 'No warranty end date';
-  if (days === 0) return 'Expires today';
-  if (days === 1) return 'Expires tomorrow';
-  if (days === -1) return 'Expired yesterday';
-  if (days < 0) return `Expired ${spanWords(days, EXPIRING_DAYS)} ago`;
-  return `Expires in ${spanWords(days, EXPIRING_DAYS)}`;
+  if (days === null) return t('warranty.noEnd');
+  if (days === 0) return t('warranty.expiresToday');
+  if (days === 1) return t('warranty.expiresTomorrow');
+  if (days === -1) return t('warranty.expiredYesterday');
+  if (days < 0) return t('warranty.expiredAgo', { span: spanWords(days, EXPIRING_DAYS) });
+  return t('warranty.expiresIn', { span: spanWords(days, EXPIRING_DAYS) });
 }
 
 /** Ending soonest first; still covered before expired; no end date last; ties by name. */

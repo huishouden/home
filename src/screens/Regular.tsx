@@ -1,6 +1,8 @@
 import { Pencil, Plus } from 'lucide-react';
 import { describePrep, describeRule } from '@huishouden/pwa-kit/schedule';
-import { addDays, clockWords, type Ymd } from '@huishouden/pwa-kit/time';
+import { addDays, atClock, type Ymd } from '@huishouden/pwa-kit/time';
+import { compareText } from '@huishouden/pwa-kit/i18n';
+import { useT } from '../i18n';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { cardClass, iconButton, primaryButton } from '@huishouden/pwa-kit/react/ui';
 import { mayChange, type HomeStore } from '../data/types';
@@ -20,24 +22,23 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
   onEdit: (e: HomeEvent) => void;
   onOpen: (e: HomeEvent, o: Occurrence) => void;
 }) {
+  const t = useT();
   const { events, contacts } = store.data;
   // Soonest next occurrence first; events with none left (an end date passed) last.
   const order = new Map(nextUp(events, today).map((x, i) => [x.event.id, i]));
-  const sorted = [...events].sort((a, b) => (order.get(a.id) ?? 1e9) - (order.get(b.id) ?? 1e9) || a.title.localeCompare(b.title));
+  const sorted = [...events].sort((a, b) => (order.get(a.id) ?? 1e9) - (order.get(b.id) ?? 1e9) || compareText(a.title, b.title));
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 lg:h-full lg:overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h2 className="text-2xl font-semibold text-ink">Regular events</h2>
+        <h2 className="text-2xl font-semibold text-ink">{t('regular.title')}</h2>
         <button type="button" className={primaryButton} onClick={onAdd}>
-          <Plus size={20} /> Add event
+          <Plus size={20} /> {t('regular.addEvent')}
         </button>
       </div>
       {store.helping && <RoleNote action="edit-others" />}
       {events.length === 0 && (
-        <p className={`${cardClass} p-6 text-lg text-muted`}>
-          Nothing regular yet. Add garbage and recycling pickup, the lawn service or the HOA meeting, with what to do the night before.
-        </p>
+        <p className={`${cardClass} p-6 text-lg text-muted`}>{t('regular.empty')}</p>
       )}
       {sorted.length > 0 && (
         <ul className={cardClass}>
@@ -52,24 +53,23 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
                     <div className="min-w-0">
                       <p className="text-xl font-semibold text-ink">{e.title}</p>
                       <p className="text-base text-muted">
-                        {describeRule(e.rule)}
-                        {e.time ? ` at ${clockWords(e.time)}` : ''}
+                        {e.time ? t('regular.ruleAt', { rule: describeRule(e.rule), at: atClock(e.time) }) : describeRule(e.rule)}
                       </p>
                       {e.prep && (
                         <p className="text-base text-muted">
-                          {e.prep.title}: {describePrep(e.prep.offset).replace(/^./, (c) => c.toLowerCase())}
+                          {t('regular.prepLine', { prep: e.prep.title, when: describePrep(e.prep.offset).replace(/^./, (c) => c.toLowerCase()) })}
                         </p>
                       )}
                       <WhoLine contact={contact} compact />
                     </div>
                     {mayChange(store, e) && (
-                      <button type="button" className={iconButton} onClick={() => onEdit(e)} aria-label={`Edit the schedule: ${e.title}`}>
+                      <button type="button" className={iconButton} onClick={() => onEdit(e)} aria-label={t('regular.editScheduleName', { name: e.title })}>
                         <Pencil size={18} />
                       </button>
                     )}
                   </div>
-                  <ul className="mt-2 flex flex-wrap gap-2" aria-label={`Next: ${e.title}`}>
-                    {list.length === 0 && <li className="text-base text-muted">No more dates.</li>}
+                  <ul className="mt-2 flex flex-wrap gap-2" aria-label={t('regular.nextName', { name: e.title })}>
+                    {list.length === 0 && <li className="text-base text-muted">{t('regular.noMore')}</li>}
                     {list.map((o) => (
                       <li key={o.original}>
                         <button
@@ -78,10 +78,16 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
                           className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors duration-150 hover:border-forest-400 ${
                             o.skipped ? 'border-line bg-sunken text-muted line-through' : o.moved ? 'border-forest-200 bg-tint dark:border-forest-600 text-link' : 'border-line bg-surface text-ink-soft'
                           }`}
-                          aria-label={`${e.title}, ${occurrenceWords(o, today)}${o.skipped ? ', skipped' : o.moved ? `, moved from ${fromWords(o.original, today)}` : ''}`}
+                          aria-label={
+                            o.skipped
+                              ? t('regular.chipSkipped', { name: e.title, when: occurrenceWords(o, today) })
+                              : o.moved
+                                ? t('regular.chipMoved', { name: e.title, when: occurrenceWords(o, today), from: fromWords(o.original, today) })
+                                : t('regular.chip', { name: e.title, when: occurrenceWords(o, today) })
+                          }
                         >
                           {o.skipped ? occurrenceWords({ date: o.original }, today) : occurrenceWords(o, today)}
-                          {o.moved && <span className="font-normal">· moved</span>}
+                          {o.moved && <span className="font-normal">· {t('regular.moved')}</span>}
                         </button>
                       </li>
                     ))}

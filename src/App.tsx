@@ -12,6 +12,7 @@ import { HomeApp } from './HomeApp';
 import { Header } from './components/Header';
 import { cardClass, primaryButton, SampleBanner, useToast } from '@huishouden/pwa-kit/react/ui';
 import { PORTAL_URL } from './lib/portal';
+import { t, useT } from './i18n';
 
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -32,7 +33,7 @@ export default function App() {
       await signInWithGoogle();
     } catch (e) {
       const code = (e as { code?: string }).code;
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') setSignInError("Couldn't sign in. Try again.");
+      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') setSignInError(t('signIn.failed'));
     } finally {
       setSigningIn(false);
     }
@@ -53,6 +54,7 @@ interface FrameProps {
 }
 
 function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
+  const t = useT();
   const email = (user.email ?? '').toLowerCase();
   const [state, setState] = useState<HouseholdState>({ status: 'loading' });
   useEffect(() => (email ? watchHousehold(db, email, setState) : undefined), [email]);
@@ -67,22 +69,19 @@ function SignedIn({ user, ...frame }: FrameProps & { user: User }) {
   }, [householdId, user]);
 
   if (state.status === 'ready') return <LiveApp household={state.household} user={user} {...frame} />;
-  if (state.status === 'loading') return <Plain user={user} {...frame}>Finding your household.</Plain>;
+  if (state.status === 'loading') return <Plain user={user} {...frame}>{t('household.finding')}</Plain>;
   if (state.status === 'error')
     return (
       <Plain user={user} {...frame}>
-        Couldn't reach the household. Check the connection; the app retries on its own.
+        {t('household.unreachable')}
       </Plain>
     );
   return (
     <Plain user={user} {...frame}>
-      <h2 className="text-2xl font-semibold text-ink">Not in a household yet</h2>
-      <p className="mt-2">
-        {user.email} isn't a member of a Huishouden household. Ask someone in your household to invite this address from the Huishouden home screen, then open
-        Home again. If you use another Google account for the household, sign out and sign in with that one.
-      </p>
+      <h2 className="text-2xl font-semibold text-ink">{t('household.noneTitle')}</h2>
+      <p className="mt-2">{t('household.none', { email: user.email ?? '' })}</p>
       <a className={`${primaryButton} mt-5`} href={PORTAL_URL}>
-        Open Huishouden
+        {t('household.openPortal')}
       </a>
     </Plain>
   );
@@ -116,13 +115,14 @@ function DemoApp({ signInError, ...frame }: FrameProps & { signInError: string |
 }
 
 function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => number; signInError: string | null }) {
+  const t = useT();
   const { toast, notify, clear } = useToast();
   const demo = useDemoStore(read);
   // `?as=helper` shows the sample house as a helper sees it (the README's screenshots, and trying it).
   const asHelper = new URLSearchParams(window.location.search).get('as') === 'helper';
   const store = useMemo(() => (asHelper ? { ...demo, me: 'sitter@example.com', helping: true } : demo), [demo, asHelper]);
   const banner = (
-    <SampleBanner text="An invented house. Nothing is saved. Sign in to use your household’s own." notice={signInError ?? undefined} />
+    <SampleBanner text={t('demo.banner')} notice={signInError ?? undefined} />
   );
   return <HomeApp store={store} user={null} {...frame} toast={toast} notify={notify} clearToast={clear} banner={banner} />;
 }

@@ -23,7 +23,7 @@ test('a contact card fills the new contact', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Import a contact card' }).click();
   await (await chooser).setFiles(fixture('landlord.vcf'));
 
-  await expect(dialog.getByText('Filled in the name, role, phone, email, address and notes from the contact card.')).toBeVisible();
+  await expect(dialog.getByText('Filled in the name, role, phone, email, address, and notes from the contact card. Check them before saving.')).toBeVisible();
   await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Jordan Example');
   await expect(dialog.getByLabel('Phone', { exact: true })).toHaveValue('(555) 010-0142');
   await expect(dialog.getByLabel('Email', { exact: true })).toHaveValue('jordan@example.com');

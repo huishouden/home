@@ -8,7 +8,8 @@ import { COLLECTIONS } from '../data/actions';
 import { screen } from './agenda';
 import type { HomeData } from './demo';
 import { PREP_LEAD_HOURS, fromWords, prepTasks, type PrepTask } from './events';
-import { CATEGORY_LABELS, type HomeTask } from './model';
+import { categoryLabel, type HomeTask } from './model';
+import { t as tr } from '../i18n';
 import { activeJobs, needsAttention } from './upkeep';
 
 // What Home puts on the household to-do list (households/{id}/todos, read by the portal's To-do
@@ -39,7 +40,7 @@ export function nextDueValue(schedule: Schedule, due: Ymd): string | NextDuePlac
 /** Done: Home's Mark done, as ops. The job's tick fields (helpers and kids may), and a history entry in the member's name. */
 export function jobDone(task: HomeTask): TodoAction {
   return {
-    label: 'Done',
+    label: tr('todo.done'),
     ops: [
       { col: COLLECTIONS.tasks, id: task.id, merge: true, data: { lastDone: '$today', due: nextDueValue(task.schedule, task.due), updatedAt: '$now' } },
       {
@@ -54,7 +55,7 @@ export function jobDone(task: HomeTask): TodoAction {
 
 /** Pause: kept, not due anywhere until resumed in Home. Admins, members, and whoever added it. */
 export function jobPause(task: HomeTask): TodoAction {
-  return { label: 'Pause', ops: [{ col: COLLECTIONS.tasks, id: task.id, merge: true, data: { pausedAt: '$now', updatedAt: '$now' } }], roles: STAFF, owner: true };
+  return { label: tr('todo.pause'), ops: [{ col: COLLECTIONS.tasks, id: task.id, merge: true, data: { pausedAt: '$now', updatedAt: '$now' } }], roles: STAFF, owner: true };
 }
 
 export function jobTodo(task: HomeTask, contacts: Contact[]): TodoInput {
@@ -62,7 +63,7 @@ export function jobTodo(task: HomeTask, contacts: Contact[]): TodoInput {
   return {
     ref: todoJobRef(task.id),
     title: task.title,
-    detail: contact ?? CATEGORY_LABELS[task.category],
+    detail: contact ?? categoryLabel(task.category),
     createdAt: task.createdAt,
     due: allDayStart(task.due),
     url: screen('upkeep'),
@@ -83,14 +84,14 @@ export function prepTodo(t: PrepTask, now: number): TodoInput {
   return {
     ref: todoPrepRef(t.id),
     title: t.prep.title,
-    detail: `Before ${midSentence(t.event.title)} · ${fromWords(t.occurrence.date, toYmd(now))}`,
+    detail: tr('todo.prepDetail', { event: midSentence(t.event.title), date: fromWords(t.occurrence.date, toYmd(now)) }),
     createdAt: t.deadline - PREP_LEAD_HOURS * HOUR,
     due: t.deadline,
     url: screen('overview'),
     owner: t.event.by,
     private: false,
-    done: { label: 'Done', ops: tick(false), roles: EVERYONE },
-    cancel: { label: 'Skip', ops: tick(true), roles: EVERYONE },
+    done: { label: tr('todo.done'), ops: tick(false), roles: EVERYONE },
+    cancel: { label: tr('todo.skip'), ops: tick(true), roles: EVERYONE },
   };
 }
 

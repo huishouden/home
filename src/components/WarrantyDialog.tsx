@@ -4,6 +4,7 @@ import { LIMITS, httpsUrl, type Warranty, type WarrantyInput } from '../lib/mode
 import { addMonths, isYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import { ContactSelect, DeleteButton } from './bits';
 import { Chip, Dialog, Field, ghostButton, inputClass, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { useT } from '../i18n';
 
 const LENGTHS = [1, 2, 3, 5, 10];
 
@@ -16,6 +17,7 @@ export function WarrantyDialog({ warranty, today, contacts, onSave, onDelete, on
   onDelete?: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [item, setItem] = useState(warranty?.item ?? '');
   const [details, setDetails] = useState(warranty?.details ?? '');
   const [purchaseDate, setPurchaseDate] = useState(warranty?.purchaseDate ?? '');
@@ -44,7 +46,7 @@ export function WarrantyDialog({ warranty, today, contacts, onSave, onDelete, on
 
   return (
     <Dialog
-      title={warranty ? 'Edit warranty' : 'New warranty'}
+      title={warranty ? t('warrantyDialog.titleEdit') : t('warrantyDialog.titleAdd')}
       onClose={onClose}
       footer={
         <>
@@ -57,10 +59,10 @@ export function WarrantyDialog({ warranty, today, contacts, onSave, onDelete, on
             />
           )}
           <button type="button" className={ghostButton} onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="button" className={primaryButton} disabled={!valid} onClick={save}>
-            Save
+            {t('common.save')}
           </button>
         </>
       }
@@ -72,45 +74,45 @@ export function WarrantyDialog({ warranty, today, contacts, onSave, onDelete, on
           save();
         }}
       >
-        <Field label="Item">
-          <input className={inputClass} value={item} maxLength={LIMITS.item} onChange={(e) => setItem(e.target.value)} placeholder="Dishwasher" />
+        <Field label={t('warrantyDialog.item')}>
+          <input className={inputClass} value={item} maxLength={LIMITS.item} onChange={(e) => setItem(e.target.value)} placeholder={t('warrantyDialog.itemPlaceholder')} />
         </Field>
-        <Field label="Brand, model, serial (optional)">
+        <Field label={t('warrantyDialog.details')}>
           <input className={inputClass} value={details} maxLength={LIMITS.details} onChange={(e) => setDetails(e.target.value)} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Bought">
+          <Field label={t('warrantyDialog.bought')}>
             <input className={inputClass} type="date" value={purchaseDate} max={today} onChange={(e) => setPurchaseDate(e.target.value)} />
           </Field>
-          <Field label="Warranty ends">
+          <Field label={t('warrantyDialog.ends')}>
             <input className={inputClass} type="date" value={warrantyEnd} onChange={(e) => setWarrantyEnd(e.target.value)} />
           </Field>
         </div>
         {isYmd(purchaseDate) && (
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Warranty length">
-            <span className="text-sm text-muted">Covered for</span>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('warrantyDialog.length')}>
+            <span className="text-sm text-muted">{t('warrantyDialog.coveredFor')}</span>
             {LENGTHS.map((years) => {
               const end = addMonths(purchaseDate, 12 * years);
               return (
                 <Chip key={years} active={warrantyEnd === end} onClick={() => setWarrantyEnd(end)}>
-                  {years} {years === 1 ? 'year' : 'years'}
+                  {t('warrantyDialog.years', { count: years })}
                 </Chip>
               );
             })}
           </div>
         )}
-        <Field label="Receipt link (optional)" hint={badLink(receiptUrl) ? 'Use a link that starts with https://' : 'A photo or PDF in Drive, Photos or your email.'}>
+        <Field label={t('warrantyDialog.receipt')} hint={badLink(receiptUrl) ? t('warrantyDialog.badLink') : t('warrantyDialog.receiptHint')}>
           <input className={inputClass} inputMode="url" value={receiptUrl} maxLength={LIMITS.url} onChange={(e) => setReceiptUrl(e.target.value)} placeholder="https://" />
         </Field>
-        <Field label="Manual link (optional)" hint={badLink(manualUrl) ? 'Use a link that starts with https://' : undefined}>
+        <Field label={t('warrantyDialog.manual')} hint={badLink(manualUrl) ? t('warrantyDialog.badLink') : undefined}>
           <input className={inputClass} inputMode="url" value={manualUrl} maxLength={LIMITS.url} onChange={(e) => setManualUrl(e.target.value)} placeholder="https://" />
         </Field>
         {(contacts.length > 0 || contactId) && (
-          <Field label="Who services it (optional)">
+          <Field label={t('warrantyDialog.who')}>
             <ContactSelect value={contactId} contacts={contacts} onChange={setContactId} />
           </Field>
         )}
-        <Field label="Notes (optional)">
+        <Field label={t('form.notesOptional')}>
           <textarea className={`${inputClass} min-h-20`} maxLength={LIMITS.notes} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Field>
         <button type="submit" hidden />
