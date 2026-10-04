@@ -271,5 +271,10 @@
   "occurrenceDialog.putBack": "Volver a ponerlo",
   "occurrenceDialog.backTo": "Volver al {date}",
   "occurrenceDialog.move": "Mover este",
-  "occurrenceDialog.skip": "Omitir este"
+  "occurrenceDialog.skip": "Omitir este",
+  "address.title": "Dirección de casa",
+  "address.approximate": "aproximada",
+  "address.map": "Mapa",
+  "address.openMap": "Abrir {address} en el mapa",
+  "address.setInPortal": "Pon la dirección de tu casa en el portal"
 }

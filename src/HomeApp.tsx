@@ -24,6 +24,7 @@ import { EventDialog } from './components/EventDialog';
 import { OccurrenceDialog } from './components/OccurrenceDialog';
 import { fromSeries, hasEventNamed, prepTasks, splitRegular, type PrepOffer, type PrepTask } from './lib/events';
 import { APP, ROLES, roleLabel } from './lib/contacts';
+import { maySetHome } from './lib/address';
 import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
 import { tabFromHash } from './lib/tabs';
@@ -198,6 +199,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         now={now}
         onTogglePrep={togglePrep}
         onSkipPrep={skipPrep}
+        canSetHome={maySetHome(role, store.helping)}
         onOpenOccurrence={(event, o) => setOccurrence({ event, occurrence: o })}
       />
     );

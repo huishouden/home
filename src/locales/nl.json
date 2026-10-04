@@ -271,5 +271,10 @@
   "occurrenceDialog.putBack": "Terugzetten",
   "occurrenceDialog.backTo": "Terug naar {date}",
   "occurrenceDialog.move": "Deze verplaatsen",
-  "occurrenceDialog.skip": "Deze overslaan"
+  "occurrenceDialog.skip": "Deze overslaan",
+  "address.title": "Huisadres",
+  "address.approximate": "bij benadering",
+  "address.map": "Kaart",
+  "address.openMap": "{address} openen op de kaart",
+  "address.setInPortal": "Vul je huisadres in in het portaal"
 }

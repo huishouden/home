@@ -13,6 +13,7 @@ import { capitalize } from '@huishouden/pwa-kit/i18n';
 import { t as tr, useT } from '../i18n';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, DateTile, EventTile, WhoLine } from '../components/bits';
+import { HomeAddress } from '../components/HomeAddress';
 import { cardClass, ghostButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export type { TabId } from '../lib/tabs';
@@ -34,12 +35,14 @@ interface Props {
   /** Not needed this time: ticked off as skipped. */
   onSkipPrep: (task: PrepTask) => void;
   onOpenOccurrence: (event: HomeEvent, occurrence: Occurrence) => void;
+  /** Admins and members, who can set the household's home in the portal. */
+  canSetHome: boolean;
 }
 
 const contactOf = (contacts: Contact[], id?: string) => (id ? contacts.find((c) => c.id === id) : undefined);
 
-/** What the house needs now, readable from across the room: the next job first, then booked visits and warranties. */
-export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onSkipPrep, onOpenOccurrence }: Props) {
+/** What the house needs now, readable from across the room: the next job first, then booked visits, warranties and the house's address. */
+export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onSkipPrep, onOpenOccurrence, canSetHome }: Props) {
   const t = useT();
   const { tasks, log, warranties, contacts, events } = store.data;
   const regular = nextUp(events, today, now).slice(0, 2);
@@ -104,6 +107,9 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
             {attention.length === 0 && <p className="mt-4 text-lg text-muted">{t('overview.nothingElse')}</p>}
           </>
         )}
+        <div className="mt-auto shrink-0 pt-5">
+          <HomeAddress canSetHome={canSetHome} />
+        </div>
       </section>
 
       <div className={`flex min-h-0 flex-col ${regular.length ? 'gap-4' : 'gap-6'}`}>
