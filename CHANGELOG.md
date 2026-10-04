@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.12.0](https://github.com/huishouden/home/compare/v1.11.1...v1.12.0) (2026-10-04)
+
+
+### Features
+
+* Home in each person's own calendar: regular events as one series, changes from Google come back; Add to calendar on every dated item ([#45](https://github.com/huishouden/home/issues/45)) ([02df8e6](https://github.com/huishouden/home/commit/02df8e60a1d3b327e34de64e7fadfdf2ec223543))
+
+
+### Bug Fixes
+
+* kit 0.70.0, dark tiles and toasts, Sign in that fits one row ([#47](https://github.com/huishouden/home/issues/47)) ([8ec3363](https://github.com/huishouden/home/commit/8ec33636f597ccab4a32e867b28018e9544a99d6))
+
 ## [1.11.1](https://github.com/huishouden/home/compare/v1.11.0...v1.11.1) (2026-10-04)
 
 
