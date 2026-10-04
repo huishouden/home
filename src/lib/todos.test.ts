@@ -9,6 +9,7 @@ import { DEMO_NOW, DEMO_TODAY, demoData, type HomeData } from './demo';
 import { prepTasks } from './events';
 import { prepTickId, type HomeTask } from './model';
 import { jobTodo, nextDueValue, todoEntryId, todoItems } from './todos';
+import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 const me = 'alex@example.com';
 const tapAt = DEMO_NOW + 2 * HOUR;
@@ -66,7 +67,7 @@ describe('what Home publishes', () => {
       detail: 'Example Roofing',
       createdAt: d.tasks.find((t) => t.id === 'demo-task-gutters')!.createdAt,
       due: allDayStart(addDays(DEMO_TODAY, -5)),
-      url: 'https://huishouden-piekstra.web.app/home/#upkeep',
+      url: `${SUITE_ORIGIN}/home/#upkeep`,
       owner: d.tasks.find((t) => t.id === 'demo-task-gutters')!.by,
       private: false,
     });
@@ -104,7 +105,7 @@ describe('what Home publishes', () => {
       detail: 'Before lawn service · Fri, Oct 17',
       createdAt: deadline - 14 * HOUR,
       due: deadline,
-      url: 'https://huishouden-piekstra.web.app/home/#overview',
+      url: `${SUITE_ORIGIN}/home/#overview`,
     });
     expect(gate.done).toEqual({ label: 'Done', ops: [{ col: 'homeEventPrep', id, data: { done: true, at: '$now', by: '$me' } }], roles: ['admin', 'member', 'helper', 'kid'] });
     expect(gate.cancel).toEqual({ label: 'Skip', ops: [{ col: 'homeEventPrep', id, data: { done: true, skipped: true, at: '$now', by: '$me' } }], roles: ['admin', 'member', 'helper', 'kid'] });
