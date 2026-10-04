@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1](https://github.com/huishouden/home/compare/v1.12.0...v1.12.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* kit v0.74.0 to 0.82.1, contacts' pay details for admins and members only ([#52](https://github.com/huishouden/home/issues/52)) ([6c7781c](https://github.com/huishouden/home/commit/6c7781cbc88b485d144f53042db7824ed435ffa3))
+
 ## [1.12.0](https://github.com/huishouden/home/compare/v1.11.1...v1.12.0) (2026-10-04)
 
 
