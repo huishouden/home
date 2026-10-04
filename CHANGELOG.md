@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/huishouden/home/compare/v1.11.0...v1.11.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* contact role words match the portal's in Spanish and Dutch ([#42](https://github.com/huishouden/home/issues/42)) ([62d074f](https://github.com/huishouden/home/commit/62d074f287abb53ea490a5416279711f7d06b78b))
+
 ## [1.11.0](https://github.com/huishouden/home/compare/v1.10.0...v1.11.0) (2026-10-04)
 
 
