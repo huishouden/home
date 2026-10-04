@@ -8,6 +8,8 @@ import { CategoryTile, WhoLine } from '../components/bits';
 import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { mayChange } from '../data/types';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
+import { jobEntry } from '../lib/agenda';
 import { useT } from '../i18n';
 import { compareText } from '@huishouden/pwa-kit/i18n';
 
@@ -67,6 +69,7 @@ export function Upkeep({ store, today, onAdd, onEdit, onDone, onResume }: {
                     <WhoLine contact={contact} compact />
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    <AddToCalendar entry={jobEntry(job, contacts)} compact />
                     <button type="button" className={secondaryButton} onClick={() => onDone(job)} aria-label={t('a11y.markDone', { name: job.title })}>
                       <Check size={18} /> <span className="hidden sm:inline">{t('common.done')}</span>
                     </button>

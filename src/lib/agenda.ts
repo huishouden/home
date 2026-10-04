@@ -1,4 +1,6 @@
-import type { AgendaInput } from '@huishouden/pwa-kit/agenda';
+import type { AgendaAction, AgendaEdit, AgendaInput } from '@huishouden/pwa-kit/agenda';
+import type { CalendarEntry } from '@huishouden/pwa-kit/calendar-export';
+import type { Role } from '@huishouden/pwa-kit/roles';
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
@@ -35,6 +37,56 @@ const contactName = (contacts: Contact[], id?: string) => (id ? contacts.find((c
 const joined = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ') || undefined;
 const inWindow = (items: AgendaEntry[], now: number) => items.filter((i) => inAgendaWindow(i, now));
 
+// ---- Changes made in a person's own calendar (huishouden/calendar) ----
+//
+// Each item says how a change made in Google Calendar is written back to its record, as the person
+// who made it, so the rules still decide: admins and members change anything; helpers and kids
+// what they added (and, on any job, its due day: the rules let them tick jobs off).
+
+const STAFF: Role[] = ['admin', 'member'];
+const EVERYONE: Role[] = ['admin', 'member', 'helper', 'kid'];
+
+/** One merge onto a record, by the roles and the record's own author. */
+export function mergeAction(col: string, id: string, data: Record<string, unknown>, roles: Role[], by: string): AgendaAction {
+  return { ops: [{ col, id, data: { ...data, updatedAt: '$now' }, merge: true }], roles, emails: [by] };
+}
+
+/**
+ * A job: moved to another day (its due date), renamed, or given notes when it has none (notes it
+ * already has aren't in the calendar, so a calendar never overwrites them).
+ */
+export function jobEdit(task: HomeTask): AgendaEdit {
+  return {
+    reschedule: mergeAction('homeTasks', task.id, { due: '$date' }, EVERYONE, task.by),
+    rename: mergeAction('homeTasks', task.id, { title: '$title' }, STAFF, task.by),
+    ...(task.notes ? {} : { notes: mergeAction('homeTasks', task.id, { notes: '$notes' }, STAFF, task.by) }),
+  };
+}
+
+/** A booked visit: moved, renamed, notes when it has none, or cancelled (the entry deleted). */
+export function visitEdit(entry: ServiceEntry): AgendaEdit {
+  return {
+    reschedule: mergeAction('homeServiceLog', entry.id, { date: '$date' }, STAFF, entry.by),
+    rename: mergeAction('homeServiceLog', entry.id, { title: '$title' }, STAFF, entry.by),
+    ...(entry.notes ? {} : { notes: mergeAction('homeServiceLog', entry.id, { notes: '$notes' }, STAFF, entry.by) }),
+    cancel: { ops: [{ col: 'homeServiceLog', id: entry.id, data: null }], roles: STAFF, emails: [entry.by] },
+  };
+}
+
+/** An item as "Add to calendar" takes it: what the app publishes, a regular event with its schedule. */
+export function calendarEntry(item: AgendaEntry): CalendarEntry {
+  return {
+    title: item.title,
+    start: item.start,
+    ...(item.end !== undefined ? { end: item.end } : {}),
+    allDay: item.allDay,
+    ...(item.detail ? { detail: item.detail } : {}),
+    url: item.url,
+    kind: item.kind,
+    ...(item.series ? { series: { rule: item.series.rule, ...(item.series.time ? { time: item.series.time } : {}), ...(item.series.minutes ? { minutes: item.series.minutes } : {}) } } : {}),
+  };
+}
+
 /** A job's next due day: overdue once that day has passed. Only the next one, not every occurrence; none while paused. */
 export function jobAgenda(task: HomeTask, contacts: Contact[], now: number): AgendaEntry[] {
   if (isPaused(task)) return [];
@@ -49,6 +101,7 @@ export function jobAgenda(task: HomeTask, contacts: Contact[], now: number): Age
         detail: joined(describeSchedule(task.schedule), contactName(contacts, task.contactId)),
         url: screen('upkeep'),
         status: overdue ? 'overdue' : 'upcoming',
+        edit: jobEdit(task),
       },
     ],
     now,
@@ -75,6 +128,7 @@ export function visitAgenda(entry: ServiceEntry, contacts: Contact[], now: numbe
         allDay: true,
         detail: contactName(contacts, entry.contactId) ?? entry.who,
         url: screen('history'),
+        edit: visitEdit(entry),
       },
     ],
     now,
@@ -109,4 +163,23 @@ export function agendaItems(data: Pick<HomeData, 'tasks' | 'log' | 'warranties' 
     ...data.events.flatMap((e) => withRef(eventRef(e.id), eventAgenda(e, data.contacts, now, screen('regular')))),
     ...data.events.flatMap((e) => withRef(prepRef(e.id), prepAgenda(e, data.prep, now, screen('regular')))),
   ];
+}
+
+// ---- Add to calendar: one item into the person's own calendar ----
+
+/** A job's due day, as Add to calendar takes it (the same words the agenda has). */
+export function jobEntry(task: HomeTask, contacts: Contact[]): CalendarEntry {
+  return { title: task.title, start: allDayStart(task.due), allDay: true, detail: joined(describeSchedule(task.schedule), contactName(contacts, task.contactId)), url: screen('upkeep'), kind: 'due' };
+}
+
+/** A booked visit's day. */
+export function visitEntry(entry: ServiceEntry, contacts: Contact[]): CalendarEntry {
+  const detail = contactName(contacts, entry.contactId) ?? entry.who;
+  return { title: entry.title, start: allDayStart(entry.date), allDay: true, ...(detail ? { detail } : {}), url: screen('history'), kind: 'appointment' };
+}
+
+/** The day a warranty ends. */
+export function warrantyEntry(w: Warranty): CalendarEntry | null {
+  if (!w.warrantyEnd) return null;
+  return { title: t('agenda.warrantyEnds', { item: w.item }), start: allDayStart(w.warrantyEnd), allDay: true, ...(w.details ? { detail: w.details } : {}), url: screen('warranties'), kind: 'renewal' };
 }

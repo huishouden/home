@@ -1,4 +1,6 @@
-import type { AgendaInput } from '@huishouden/pwa-kit/agenda';
+import type { AgendaEdit, AgendaInput } from '@huishouden/pwa-kit/agenda';
+import type { CalendarEntry } from '@huishouden/pwa-kit/calendar-export';
+import type { Role } from '@huishouden/pwa-kit/roles';
 import { looksLikePrep, recurringSeries, seriesCover, similarTitles, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
@@ -284,19 +286,54 @@ const agendaKind = (kind: EventKind) => (kind === 'lawn' || kind === 'cleaning' 
 type AgendaEntry = Omit<AgendaInput, 'ref'>;
 const joined = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(' · ') || undefined;
 
-/** Each occurrence of the next 60 days, on its day (at its time, or all day), with no status: it just happens. */
+/** How long an occurrence takes, for calendars: a pickup is quick, a lawn service or cleaners take a while. */
+export const EVENT_MINUTES: Record<EventKind, number> = { trash: 30, recycling: 30, 'yard waste': 30, lawn: 120, hoa: 60, cleaning: 180, other: 60 };
+
+const STAFF: Role[] = ['admin', 'member'];
+
+/**
+ * How a change made in a person's own calendar comes back to the event (huishouden/calendar): one
+ * occurrence moved or skipped (a change keyed by the day the schedule put it on, `$original`), the
+ * usual time changed, the event renamed, or notes when it has none. As the person: admins and
+ * members, or whoever added the event.
+ */
+export function eventEdit(event: HomeEvent): AgendaEdit {
+  const merge = (data: Record<string, unknown>) => ({ ops: [{ col: 'homeEvents', id: event.id, data: { ...data, updatedAt: '$now' }, merge: true }], roles: STAFF, emails: [event.by] });
+  return {
+    reschedule: merge({ exceptions: { $original: { moved: { date: '$date', time: '$time' } } } }),
+    skip: merge({ exceptions: { $original: { skipped: true } } }),
+    rename: merge({ title: '$title' }),
+    ...(event.time ? { retime: merge({ time: '$time' }) } : {}),
+    ...(event.notes ? {} : { notes: merge({ notes: '$notes' }) }),
+  };
+}
+
+/**
+ * Each occurrence of the next 60 days, on its day (at its time, or all day), with no status: it just
+ * happens. Each carries the schedule (`series`), so a calendar shows one repeating event, and the
+ * edits that bring changes made there back.
+ */
 export function eventAgenda(event: HomeEvent, contacts: Contact[], now: number, url: string): AgendaEntry[] {
   const today = toYmd(now);
+  const through = addDays(today, EVENT_AGENDA_DAYS);
   const who = event.contactId ? contacts.find((c) => c.id === event.contactId)?.name : undefined;
-  return occurrencesOf(event, today, addDays(today, EVENT_AGENDA_DAYS))
-    .map((o): AgendaEntry => ({
-      kind: agendaKind(event.kind),
-      title: event.title,
-      start: o.time ? atTime(o.date, o.time) : allDayStart(o.date),
-      allDay: !o.time,
-      detail: joined(o.moved ? t('events.movedFrom', { date: fromWords(o.original, today) }) : describeRule(event.rule), o.note, who),
-      url,
-    }))
+  const minutes = EVENT_MINUTES[event.kind] ?? 60;
+  const edit = eventEdit(event);
+  return occurrencesOf(event, today, through)
+    .map((o): AgendaEntry => {
+      const start = o.time ? atTime(o.date, o.time) : allDayStart(o.date);
+      return {
+        kind: agendaKind(event.kind),
+        title: event.title,
+        start,
+        ...(o.time ? { end: start + minutes * 60_000 } : {}),
+        allDay: !o.time,
+        detail: joined(o.moved ? t('events.movedFrom', { date: fromWords(o.original, today) }) : describeRule(event.rule), o.note, who),
+        url,
+        series: { rule: event.rule, ...(event.time ? { time: event.time } : {}), minutes, original: o.original, through },
+        edit,
+      };
+    })
     .filter((i) => inAgendaWindow(i, now));
 }
 
@@ -373,4 +410,28 @@ export const eventInput = (e: HomeEvent): EventInput => ({
 /** The event with one occurrence moved, skipped, or (with `null`) put back; old changes pruned. */
 export function withOccurrenceChange(event: HomeEvent, original: Ymd, change: OccurrenceChange | null, today: Ymd): EventInput {
   return { ...eventInput(event), exceptions: pruneChanges(withChange(event.exceptions, original, change), addDays(today, -KEEP_CHANGES_DAYS)) };
+}
+
+// ---- Add to calendar ----
+
+/** A regular event as Add to calendar takes it: the whole series, repeating, from its first day. */
+export function eventEntry(event: HomeEvent, contacts: Contact[], url: string): CalendarEntry {
+  const who = event.contactId ? contacts.find((c) => c.id === event.contactId)?.name : undefined;
+  const start = event.time ? atTime(event.rule.start, event.time) : allDayStart(event.rule.start);
+  return {
+    title: event.title,
+    start,
+    allDay: !event.time,
+    detail: joined(describeRule(event.rule), who),
+    url,
+    kind: agendaKind(event.kind),
+    series: { rule: event.rule, ...(event.time ? { time: event.time } : {}), minutes: EVENT_MINUTES[event.kind] ?? 60 },
+  };
+}
+
+/** One occurrence on its own (moved or not), for Add to calendar in its dialog. */
+export function occurrenceEntry(event: HomeEvent, o: Pick<Occurrence, 'date' | 'time'>, url: string): CalendarEntry {
+  const start = o.time ? atTime(o.date, o.time) : allDayStart(o.date);
+  const minutes = EVENT_MINUTES[event.kind] ?? 60;
+  return { title: event.title, start, ...(o.time ? { end: start + minutes * 60_000 } : {}), allDay: !o.time, detail: describeRule(event.rule), url, kind: agendaKind(event.kind) };
 }

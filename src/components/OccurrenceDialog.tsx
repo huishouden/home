@@ -7,7 +7,9 @@ import { useT } from '../i18n';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { Dialog, Field, ghostButton, inputClass, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import type { HomeEvent } from '../lib/model';
-import { fromWords } from '../lib/events';
+import { fromWords, occurrenceEntry } from '../lib/events';
+import { screen } from '../lib/agenda';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
 
 /**
  * One occurrence of a regular event: move this one (a holiday week) or skip it without touching
@@ -54,6 +56,7 @@ export function OccurrenceDialog({ event, occurrence, today, canChange, onChange
           {o.moved && <p className="text-base text-muted">{t('events.movedFrom', { date: fromWords(o.original, today) })}</p>}
           {o.note && <p className="text-base text-muted">{o.note}</p>}
         </div>
+        {!o.skipped && <AddToCalendar entry={occurrenceEntry(event, o, screen('regular'))} />}
 
         {!canChange ? (
           <RoleNote action="edit-others" />

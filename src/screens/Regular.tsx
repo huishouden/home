@@ -7,7 +7,9 @@ import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { cardClass, iconButton, primaryButton } from '@huishouden/pwa-kit/react/ui';
 import { mayChange, type HomeStore } from '../data/types';
 import { EventTile, WhoLine } from '../components/bits';
-import { fromWords, nextUp, occurrencesOf, occurrenceWords } from '../lib/events';
+import { eventEntry, fromWords, nextUp, occurrencesOf, occurrenceWords } from '../lib/events';
+import { screen } from '../lib/agenda';
+import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
 import type { HomeEvent } from '../lib/model';
 import type { Occurrence } from '@huishouden/pwa-kit/schedule';
 
@@ -62,11 +64,14 @@ export function Regular({ store, today, onAdd, onEdit, onOpen }: {
                       )}
                       <WhoLine contact={contact} compact />
                     </div>
-                    {mayChange(store, e) && (
-                      <button type="button" className={iconButton} onClick={() => onEdit(e)} aria-label={t('regular.editScheduleName', { name: e.title })}>
-                        <Pencil size={18} />
-                      </button>
-                    )}
+                    <div className="flex shrink-0 items-center gap-1">
+                      <AddToCalendar entry={eventEntry(e, contacts, screen('regular'))} compact />
+                      {mayChange(store, e) && (
+                        <button type="button" className={iconButton} onClick={() => onEdit(e)} aria-label={t('regular.editScheduleName', { name: e.title })}>
+                          <Pencil size={18} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <ul className="mt-2 flex flex-wrap gap-2" aria-label={t('regular.nextName', { name: e.title })}>
                     {list.length === 0 && <li className="text-base text-muted">{t('regular.noMore')}</li>}

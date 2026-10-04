@@ -171,3 +171,26 @@ test('Import from calendar offers a repeating pickup as a regular event', async 
   await dialog.getByRole('button', { name: 'Make Trash day a regular event' }).click();
   await expect(page.getByRole('dialog', { name: 'New regular event' }).getByLabel('What', { exact: true })).toHaveValue('Trash day');
 });
+
+test('Add to calendar puts the whole series in Google Calendar, or one occurrence as a .ics file', async ({ page }) => {
+  await page.goto('./');
+  await regularTab(page);
+  const row = page.getByRole('listitem', { name: 'Lawn service', exact: true });
+  await row.getByRole('button', { name: 'Add Lawn service to a calendar' }).click();
+  const google = row.getByRole('menuitem', { name: 'Google Calendar' });
+  expect(new URL((await google.getAttribute('href'))!).searchParams.get('recur')).toMatch(/^RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=FR;WKST=SU/);
+  await expect(row.getByText('Adds the whole series, repeating.')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await row.getByRole('list', { name: /Next/ }).getByRole('button').first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Add to calendar' }).click();
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('menuitem', { name: /\.ics/ }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('Lawn-service.ics');
+  const text = await (await file.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks).toString('utf8'));
+  expect(text).toContain('METHOD:PUBLISH');
+  expect(text).toContain('SUMMARY:Lawn service');
+  expect(text).not.toContain('RRULE:FREQ=WEEKLY');
+});
