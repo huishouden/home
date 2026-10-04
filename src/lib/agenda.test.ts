@@ -6,6 +6,7 @@ import { AGENDA_APP, APP_URL, agendaItems, isBookedVisit, jobAgenda, visitAgenda
 import { DEMO_NOW, demoData } from './demo';
 import type { HomeTask, ServiceEntry, Warranty } from './model';
 import { tabFromHash } from './tabs';
+import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 const now = new Date(2031, 9, 16, 10, 30).getTime();
 const today = '2031-10-16';
@@ -38,7 +39,7 @@ describe('jobs', () => {
         start: allDayStart(at(4)),
         allDay: true,
         detail: 'Every 3 months · Example Heating & Air',
-        url: 'https://huishouden-piekstra.web.app/home/#upkeep',
+        url: `${SUITE_ORIGIN}/home/#upkeep`,
         status: 'upcoming',
       },
     ]);

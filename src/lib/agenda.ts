@@ -4,7 +4,7 @@ import type { Role } from '@huishouden/pwa-kit/roles';
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
-import { appUrl } from '@huishouden/pwa-kit/site';
+import { appUrl, SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 import { daysBetween, toYmd } from '@huishouden/pwa-kit/time';
 import type { HomeTask, ServiceEntry, Warranty } from './model';
 import { eventAgenda, eventRef, prepAgenda, prepRef } from './events';
@@ -20,7 +20,7 @@ import { t } from '../i18n';
 // Home's path on the suite's one site (pwa-kit docs/one-site.md). In the browser the origin is the
 // page's, so staging links to staging; unit tests run without a page.
 const BASE = import.meta.env.BASE_URL ?? '/home/';
-const ORIGIN = globalThis.location?.origin ?? 'https://huishouden-piekstra.web.app';
+const ORIGIN = globalThis.location?.origin ?? SUITE_ORIGIN;
 /** Home's address, ending in `/home/`. */
 export const APP_URL = appUrl(BASE, '', ORIGIN);
 /** The repo short name the agenda files Home's items under. */

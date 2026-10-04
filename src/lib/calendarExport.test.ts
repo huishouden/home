@@ -7,10 +7,11 @@ import { AGENDA_APP, calendarEntry, jobAgenda, jobEntry, visitAgenda, visitEntry
 import { allDayStart } from '@huishouden/pwa-kit/agenda';
 import { EVENT_AGENDA_DAYS, eventAgenda, eventEdit, eventEntry, occurrenceEntry } from './events';
 import { EVENT_KEYS, SERVICE_KEYS, TASK_KEYS, eventDoc, type HomeEvent, type HomeTask, type ServiceEntry } from './model';
+import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 // What Home publishes for calendars (huishouden/calendar, @huishouden/pwa-kit/calendar-export):
 // regular events as one repeating series, and the edits that bring changes made there back.
-const URL = 'https://huishouden-piekstra.web.app/home/#regular';
+const URL = `${SUITE_ORIGIN}/home/#regular`;
 const now = atTime('2031-10-16', '10:30');
 const trash: HomeEvent = {
   id: 'e1',
