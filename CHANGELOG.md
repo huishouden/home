@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.16.3](https://github.com/huishouden/home/compare/v1.16.2...v1.16.3) (2026-10-05)
+
+### Bug Fixes
+
+* Rebuild against the re-tagged kit ([fb656a2](https://github.com/huishouden/home/commit/fb656a20f77fd22ab4f5ec1dbef38dec7e4e64e0))
+
 ## [1.16.2](https://github.com/huishouden/home/compare/v1.16.1...v1.16.2) (2026-10-05)
 
 ### Changes
