@@ -72,7 +72,7 @@
   "eventWhen.withTime": "{when} {at}",
   "events.movedFrom": "Movido desde el {date}",
   "events.before": "Antes de {what}",
-  "todo.done": "Listo",
+  "todo.done": "Marcar como hecho",
   "todo.pause": "Pausar",
   "todo.skip": "Omitir",
   "todo.prepDetail": "Antes de {event} · {date}",

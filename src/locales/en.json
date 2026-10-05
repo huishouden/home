@@ -72,7 +72,7 @@
   "eventWhen.withTime": "{when} {at}",
   "events.movedFrom": "Moved from {date}",
   "events.before": "Before {what}",
-  "todo.done": "Done",
+  "todo.done": "Mark done",
   "todo.pause": "Pause",
   "todo.skip": "Skip",
   "todo.prepDetail": "Before {event} · {date}",

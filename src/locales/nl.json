@@ -72,7 +72,7 @@
   "eventWhen.withTime": "{when} {at}",
   "events.movedFrom": "Verplaatst van {date}",
   "events.before": "Vóór {what}",
-  "todo.done": "Klaar",
+  "todo.done": "Afvinken",
   "todo.pause": "Pauzeren",
   "todo.skip": "Overslaan",
   "todo.prepDetail": "Vóór {event} · {date}",
