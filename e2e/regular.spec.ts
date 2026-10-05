@@ -10,36 +10,49 @@ test.beforeEach(async ({ page }, info) => {
 
 const regularTab = (page: Page) => page.getByRole('button', { name: 'Regular', exact: true }).first().click();
 
-test('the thing to do before shows in Needs doing; Done records who and when, and Undo puts it back', async ({ page }) => {
+test('the thing to do before shows in Needs doing; Mark done records who and when, Undo puts it back', async ({ page }) => {
   await page.goto('./');
-  const before = page.getByRole('region', { name: 'Upkeep' }).getByRole('list', { name: 'Before regular events' });
-  const gate = before.getByRole('listitem', { name: 'Unlock the side gate' });
+  const card = page.getByRole('region', { name: 'Upkeep' });
+  const before = card.getByRole('list', { name: 'Before regular events' });
+  const gate = before.getByRole('listitem').filter({ hasText: 'Unlock the side gate' });
   await expect(gate).toContainText('Unlock the side gate · tonight by 7 PM');
   await expect(gate).toContainText('For lawn service tomorrow at 9 AM');
-  await expect(page.getByRole('region', { name: 'Upkeep' })).toContainText('1 to do soon');
+  await expect(card).toContainText('1 to do soon');
 
-  const done = gate.getByRole('button', { name: 'Done: Unlock the side gate' });
-  await expect(done).toHaveAttribute('aria-pressed', 'false');
-  await done.click();
-  await expect(done).toHaveAttribute('aria-pressed', 'true');
-  await expect(gate).toContainText('Done by You at 10:30 AM');
+  // Open and done are different controls with different names, never a pressed toggle.
+  const mark = gate.getByRole('button', { name: 'Mark Unlock the side gate done' });
+  const undo = gate.getByRole('button', { name: 'Undo done for Unlock the side gate' });
+  await expect(mark).toBeVisible();
+  await expect(undo).toHaveCount(0);
+  await expect(card.locator('[aria-pressed]')).toHaveCount(0);
+  await expect(gate).toHaveAttribute('data-completion', 'open');
+  await mark.click();
   await expect(page.getByText('Done: Unlock the side gate')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(done).toHaveAttribute('aria-pressed', 'false');
-  await expect(gate).toContainText('tonight by 7 PM');
+  // The only one, so the list folds to one line that opens again.
+  const allDone = card.getByRole('button', { name: /All done for now/ });
+  await expect(allDone).toHaveAttribute('aria-expanded', 'false');
+  await expect(gate).toHaveCount(0);
+  await allDone.click();
+  await expect(gate).toHaveAttribute('data-completion', 'done');
+  await expect(mark).toHaveCount(0);
+  await expect(undo).toBeVisible();
+  await expect(gate).toContainText('Done by You · 10:30 AM');
+  await expect(gate).not.toContainText('tonight by 7 PM');
+  await expect(card.locator('[aria-pressed]')).toHaveCount(0);
 
-  // Tapping a done one again undoes it too.
-  await done.click();
-  await done.click();
-  await expect(done).toHaveAttribute('aria-pressed', 'false');
+  // The row's own Undo, for when the toast has gone.
+  await undo.click();
+  await expect(mark).toBeVisible();
+  await expect(gate).toContainText('tonight by 7 PM');
+  await expect(allDone).toHaveCount(0);
 });
 
 test('a thing to do before turns terracotta once late, and says missed after the event begins', async ({ page }) => {
   // The sample's clock starts at 10:30 and runs on from there.
   await page.clock.install({ time: new Date('2031-10-16T10:30:00') });
   await page.goto('./');
-  const gate = page.getByRole('listitem', { name: 'Unlock the side gate' });
+  const gate = page.getByRole('listitem').filter({ hasText: 'Unlock the side gate' });
   await expect(gate).toContainText('tonight by 7 PM');
   await page.clock.fastForward('09:30:00');
   await expect(gate).toContainText('was due tonight by 7 PM');

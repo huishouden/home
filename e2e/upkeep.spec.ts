@@ -17,8 +17,11 @@ test('the overview leads with what is overdue, then what is due soon', async ({ 
 
 test('Done rolls the job forward, records it in the history, and can be undone', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: 'Mark done: Gutter cleaning' }).click();
+  await page.getByRole('button', { name: 'Mark Gutter cleaning done' }).click();
   await expect(page.getByText('Done: Gutter cleaning. Next due Apr 16, 2032.')).toBeVisible();
+  // Rolled forward: no done-looking button stays behind, and nothing is a pressed toggle.
+  await expect(page.getByRole('button', { name: 'Mark Gutter cleaning done' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Upkeep' }).locator('[aria-pressed]')).toHaveCount(0);
   await expect(page.getByText('Change HVAC filter due in 4 days')).toBeVisible();
 
   await page.getByRole('button', { name: 'History', exact: true }).first().click();
@@ -179,11 +182,13 @@ test('a paused job stays in Upkeep as Paused, off the overview, until it is resu
 
 test('the thing to do before can be skipped, shows as skipped, and the skip undone', async ({ page }) => {
   await page.goto('./');
-  const row = page.getByRole('listitem', { name: 'Unlock the side gate' });
+  const card = page.getByRole('region', { name: 'Upkeep' });
+  const row = card.getByRole('listitem').filter({ hasText: 'Unlock the side gate' });
   await row.getByRole('button', { name: 'Skip: Unlock the side gate' }).click();
   await expect(page.getByText('Skipped: Unlock the side gate')).toBeVisible();
-  await expect(row.getByRole('button', { name: 'Skipped: Unlock the side gate' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(row).toContainText('Skipped by');
-  await row.getByRole('button', { name: 'Skipped: Unlock the side gate' }).click();
-  await expect(row.getByRole('button', { name: 'Done: Unlock the side gate' })).toHaveAttribute('aria-pressed', 'false');
+  await card.getByRole('button', { name: /All done for now/ }).click();
+  await expect(row).toHaveAttribute('data-completion', 'skipped');
+  await expect(row).toContainText('Skipped by You · 10:30 AM');
+  await row.getByRole('button', { name: 'Undo skip for Unlock the side gate' }).click();
+  await expect(row.getByRole('button', { name: 'Mark Unlock the side gate done' })).toBeVisible();
 });
