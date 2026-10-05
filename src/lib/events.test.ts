@@ -2,8 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { allDayStart } from '@huishouden/pwa-kit/agenda';
 import { atTime } from '@huishouden/pwa-kit/time';
 import {
-  eventPresets, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepTasks, withOccurrenceChange,
+  eventPresets, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepSource, prepTasks, withOccurrenceChange,
 } from './events';
+import { readSource, sourceAllowed, stillDue } from '@huishouden/pwa-kit/reminder-source';
+import { reminderDoc } from '@huishouden/pwa-kit/reminders';
+import { prepTodo } from './todos';
 import { eventDoc, type HomeEvent, type PrepTick } from './model';
 import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
@@ -157,7 +160,22 @@ describe('the household agenda and reminders', () => {
   test('a reminder at each deadline of the next two weeks, not for ticked ones or ones without remind', () => {
     const r = prepReminders([trash, { ...lawn, prep: { title: 'Gate', offset: { daysBefore: 0, time: '07:00' }, remind: false } }], [tick('2031-10-23')], now, `${SUITE_ORIGIN}/home/`);
     expect(r.map((x) => [x.title, x.body, x.at])).toEqual([['Take the garbage out', 'Garbage pickup tomorrow at 7 AM', atTime('2031-10-29', '19:00')]]);
-    expect(r[0]).toMatchObject({ app: 'home', ref: 'home:prep:e1', recipients: 'all', private: false });
+    expect(r[0]).toMatchObject({ app: 'home', ref: 'home:prep:e1', recipients: 'all', private: false, source: { checks: [{ doc: 'homeEventPrep/e1_2031-10-30', absent: true }, { doc: 'homeEvents/e1' }] } });
+  });
+
+  test('the sender drops it once the thing is ticked or skipped elsewhere, or the event removed', () => {
+    const [r] = prepReminders([trash], [tick('2031-10-23')], now, `${SUITE_ORIGIN}/home/`);
+    const source = readSource('home', reminderDoc(r, 'helen@example.com', now).source)!;
+    expect(sourceAllowed('home', source, 'helen@example.com', 'helper', new Map())).toBe(true);
+    const task = prepTasks([trash], [tick('2031-10-23')], atTime('2031-10-29', '12:00')).find((t) => t.id === 'e1_2031-10-30')!;
+    expect(source).toEqual(prepSource(task));
+    // The portal's Done and Skip write the tick the source waits for.
+    const todo = prepTodo(task, now);
+    for (const action of [todo.done!, todo.cancel!]) expect(action.ops.map((o) => `${o.col}/${o.id}`)).toEqual(['homeEventPrep/e1_2031-10-30']);
+    const read = (tickDoc: Record<string, unknown> | null, event: Record<string, unknown> | null = trash as never) => stillDue(source, new Map([['homeEventPrep/e1_2031-10-30', tickDoc], ['homeEvents/e1', event]]));
+    expect(read(null)).toBe(true);
+    expect(read({ done: true, at: 1, by: 'alex@example.com' })).toBe(false);
+    expect(read(null, null)).toBe(false);
   });
 });
 

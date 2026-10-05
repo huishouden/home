@@ -4,7 +4,7 @@ import type { Role } from '@huishouden/pwa-kit/roles';
 import { looksLikePrep, recurringSeries, seriesCover, similarTitles, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import type { ReminderInput } from '@huishouden/pwa-kit/reminders';
+import type { ReminderInput, ReminderSource } from '@huishouden/pwa-kit/reminders';
 import {
   describeRule, eventOccurrences, prepState, prepWindow, pruneChanges, weekdayOfMonth, withChange,
   type EventPrep, type EventRule, type Nth, type Occurrence, type OccurrenceChange, type PrepState,
@@ -12,7 +12,7 @@ import {
 import { HOUR, addDays, atClock, atTime, clockWords, daysBetween, formatDayShort, formatYmd, midSentence, shortDate, toYmd, weekday, weekdayName, weekdayShort, ymdParts, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
 import { capitalize, type Lang } from '@huishouden/pwa-kit/i18n';
 import { t } from '../i18n';
-import { prepTickId, type EventInput, type EventKind, type HomeEvent, type PrepTick } from './model';
+import { EVENTS_COL, PREP_COL, prepTickId, type EventInput, type EventKind, type HomeEvent, type PrepTick } from './model';
 
 // Regular events (garbage pickup, a lawn service) and the things to do before them: what the
 // screens list, what Needs doing shows, and what goes on the household agenda and into reminders.
@@ -368,6 +368,15 @@ export const PREP_REMINDER_DAYS = 14;
 
 export const prepReminderRef = (eventId: string) => `home:prep:${eventId}`;
 
+/**
+ * What a thing-to-do-before reminder is about, for the shared sender to check before sending: due
+ * while that occurrence's tick (`homeEventPrep/{event}_{day}`) isn't written and the event still
+ * exists. Ticked or skipped from the portal's To-do list, or the event removed, it is deleted unsent.
+ */
+export const prepSource = (task: Pick<PrepTask, 'id' | 'event'>): ReminderSource => ({
+  checks: [{ doc: `${PREP_COL}/${task.id}`, absent: true }, { doc: `${EVENTS_COL}/${task.event.id}` }],
+});
+
 /** A reminder at the deadline of each thing to do before that asks for one, not yet ticked, in the next two weeks. */
 export function prepReminders(events: HomeEvent[], ticks: PrepTick[], now: number, url: string): ReminderInput[] {
   const today = toYmd(now);
@@ -388,6 +397,7 @@ export function prepReminders(events: HomeEvent[], ticks: PrepTick[], now: numbe
       recipients: 'all' as const,
       ref: prepReminderRef(t.event.id),
       private: false,
+      source: prepSource(t),
     }));
 }
 

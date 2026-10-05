@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.0](https://github.com/huishouden/home/compare/v1.14.3...v1.15.0) (2026-10-05)
+
+### Features
+
+* **reminders:** each thing-to-do-before reminder names its tick, so doing it elsewhere stops it ([d14d412](https://github.com/huishouden/home/commit/d14d412ed46e29aeb22c4143a57d130067d56d08))
+
+### Other
+
+* docs, review: reminders that stop once done elsewhere ([c779c2d](https://github.com/huishouden/home/commit/c779c2d19c13e956ca8f4ca7d76d8dac4875ace8))
+
 ## [1.14.3](https://github.com/huishouden/home/compare/v1.14.2...v1.14.3) (2026-10-05)
 
 ### Tests

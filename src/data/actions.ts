@@ -5,7 +5,7 @@ import { track } from '@huishouden/pwa-kit/observability';
 import type { HomeData } from '../lib/demo';
 import { doneFromEntry, markDone, resumedDue, tickedTask } from '../lib/done';
 import { withOccurrenceChange } from '../lib/events';
-import { eventDoc, prepTickDoc, prepTickId, serviceDoc, taskDoc, warrantyDoc, type HomeTask, type TaskInput } from '../lib/model';
+import { EVENTS_COL, PREP_COL, eventDoc, prepTickDoc, prepTickId, serviceDoc, taskDoc, warrantyDoc, type HomeTask, type TaskInput } from '../lib/model';
 import type { HomeActions } from './types';
 
 // The Home actions, written once over a storage interface that the live (Firestore) and the sample
@@ -17,8 +17,8 @@ export const COLLECTIONS = {
   tasks: 'homeTasks',
   log: 'homeServiceLog',
   warranties: 'homeWarranties',
-  events: 'homeEvents',
-  prep: 'homeEventPrep',
+  events: EVENTS_COL,
+  prep: PREP_COL,
 } as const satisfies Partial<Record<keyof HomeData, string>>;
 export type DataKey = keyof typeof COLLECTIONS;
 
