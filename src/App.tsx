@@ -6,7 +6,8 @@ import { useRole } from '@huishouden/pwa-kit/react/roles';
 import { auth, db, googleClientId, signInWithGoogle, signOutEverywhere } from './data/firebase';
 import { useLiveStore } from './data/useLiveStore';
 import { useDemoStore } from './data/useDemoStore';
-import { DEMO_NOW } from './lib/demo';
+import { DEMO_HOME, DEMO_NOW } from './lib/demo';
+import { setHome } from '@huishouden/pwa-kit/home';
 import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
 import { HomeApp } from './HomeApp';
 import { Header } from './components/Header';
@@ -114,8 +115,16 @@ function DemoApp({ signInError, ...frame }: FrameProps & { signInError: string |
   );
 }
 
+/** `?home=none` shows the sample house before its household has set the address. */
+const sampleHome = () => (new URLSearchParams(window.location.search).get('home') === 'none' ? undefined : DEMO_HOME);
+
 function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => number; signInError: string | null }) {
   const t = useT();
+  // The sample's home, as `watchHousehold` sets a signed-in household's.
+  useEffect(() => {
+    setHome(sampleHome());
+    return () => setHome(undefined);
+  }, []);
   const { toast, notify, clear } = useToast();
   const demo = useDemoStore(read);
   // `?as=helper` shows the sample house as a helper sees it (the README's screenshots, and trying it).

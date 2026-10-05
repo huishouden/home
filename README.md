@@ -126,6 +126,13 @@ Find in my calendar and Import from calendar read Google Calendar (read-only) th
 `@huishouden/pwa-kit/calendar`; Google asks once for permission the first time. Find a business looks
 places up on OpenStreetMap (`@huishouden/pwa-kit/places`), only when Search is pressed.
 
+The house's address: with the household's home set (the portal's Household panel,
+`households/{id}.home` through `@huishouden/pwa-kit/home`), the overview's upkeep card ends with the
+address and a link to it on OpenStreetMap, which every member sees, helpers and kids included.
+Without one, admins and members see a link to set it in the portal. Contacts with a position
+(`lat`/`lng`, saved from the map search or looked up on save) say how far they are from home. The
+signed-out sample has an invented home in Springfield; `?home=none` shows it without one.
+
 ## Privacy
 
 Household data lives in the household's own Firestore documents, visible only to its members.

@@ -1,4 +1,5 @@
 import type { Contact } from '@huishouden/pwa-kit/contacts';
+import type { HouseholdHome } from '@huishouden/pwa-kit/home';
 import { prepTickId, type Category, type HomeEvent, type HomeTask, type PrepTick, type ServiceEntry, type Warranty } from './model';
 import { firstDue, type Schedule } from '@huishouden/pwa-kit/schedule';
 import { addDays, addMonths, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
@@ -37,10 +38,20 @@ const ROOFING = 'demo-contact-roofing';
 const INSURANCE = 'demo-contact-insurance';
 const HOA = 'demo-contact-hoa';
 
+/** The sample house's address: invented, in Springfield, Illinois. */
+export const DEMO_HOME: HouseholdHome = {
+  address: '12 Example Lane, Springfield, Illinois 62701',
+  lat: 39.7817,
+  lng: -89.6501,
+  timeZone: 'America/Chicago',
+  setBy: SAM,
+  updatedAt: created,
+};
+
 function contacts(): Contact[] {
   const base = { apps: ['home'], createdAt: created, by: SAM };
   return [
-    { id: HVAC, name: 'Example Heating & Air', role: 'HVAC', phone: '(555) 010-0110', website: 'https://hvac.example.com', address: '8 Example Avenue, Springfield', ...base },
+    { id: HVAC, name: 'Example Heating & Air', role: 'HVAC', phone: '(555) 010-0110', website: 'https://hvac.example.com', address: '8 Example Avenue, Springfield', lat: 39.7954, lng: -89.6623, ...base },
     {
       id: PEST,
       name: 'Example Pest Control',
@@ -49,11 +60,13 @@ function contacts(): Contact[] {
       email: 'service@pest.example.com',
       website: 'https://pest.example.com',
       address: '31 Sample Road, Springfield',
+      lat: 39.7702,
+      lng: -89.6105,
       notes: 'Quarterly plan. They call the day before a visit.',
       ...base,
     },
     { id: LAWN, name: 'Example Lawn Care', role: 'Lawn service', phone: '(555) 010-0130', notes: 'Mows every other Friday. Gate code is on the fridge.', ...base },
-    { id: PLUMBING, name: 'Example Plumbing', role: 'Plumber', phone: '(555) 010-0140', website: 'https://plumbing.example.com', address: '2 Demo Street, Springfield', ...base },
+    { id: PLUMBING, name: 'Example Plumbing', role: 'Plumber', phone: '(555) 010-0140', website: 'https://plumbing.example.com', address: '2 Demo Street, Springfield', lat: 39.8011, lng: -89.6437, ...base },
     { id: ROOFING, name: 'Example Roofing', role: 'Roofer', phone: '(555) 010-0150', website: 'https://roofing.example.com', ...base },
     { id: INSURANCE, name: 'Example Insurance', role: 'Insurance', phone: '(555) 010-0160', website: 'https://insurance.example.com', ...base },
     { id: HOA, name: 'Example HOA Management', role: 'HOA', phone: '(555) 010-0170', email: 'board@hoa.example.com', ...base },

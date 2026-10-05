@@ -18,6 +18,14 @@ test('the providers are one tap from a call or a map', async ({ page }) => {
   await expect(card.getByRole('link', { name: 'pest.example.com', exact: true })).toHaveAttribute('href', 'https://pest.example.com');
 });
 
+test('providers say how far they are from home', async ({ page }) => {
+  await openContacts(page);
+  await expect(page.getByRole('region', { name: 'Example Heating & Air' })).toContainText('1.1 mi from home');
+  await expect(page.getByRole('region', { name: 'Example Pest Control' })).toContainText('2.2 mi from home');
+  // No address, no distance.
+  await expect(page.getByRole('region', { name: 'Example Lawn Care' })).not.toContainText('from home');
+});
+
 test('Find a business fills the contact from OpenStreetMap, only on Search', async ({ page }) => {
   let searches = 0;
   await page.route('https://nominatim.openstreetmap.org/**', (route) => {
