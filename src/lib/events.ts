@@ -4,7 +4,7 @@ import type { Role } from '@huishouden/pwa-kit/roles';
 import { looksLikePrep, recurringSeries, seriesCover, similarTitles, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
-import type { ReminderInput } from '@huishouden/pwa-kit/reminders';
+import type { ReminderInput, ReminderSource } from '@huishouden/pwa-kit/reminders';
 import {
   describeRule, eventOccurrences, prepState, prepWindow, pruneChanges, weekdayOfMonth, withChange,
   type EventPrep, type EventRule, type Nth, type Occurrence, type OccurrenceChange, type PrepState,
@@ -368,6 +368,15 @@ export const PREP_REMINDER_DAYS = 14;
 
 export const prepReminderRef = (eventId: string) => `home:prep:${eventId}`;
 
+/**
+ * What a thing-to-do-before reminder is about, for the shared sender to check before sending: due
+ * while that occurrence's tick (`homeEventPrep/{event}_{day}`) isn't written and the event still
+ * exists. Ticked or skipped from the portal's To-do list, or the event removed, it is deleted unsent.
+ */
+export const prepSource = (task: Pick<PrepTask, 'id' | 'event'>): ReminderSource => ({
+  checks: [{ doc: `homeEventPrep/${task.id}`, absent: true }, { doc: `homeEvents/${task.event.id}` }],
+});
+
 /** A reminder at the deadline of each thing to do before that asks for one, not yet ticked, in the next two weeks. */
 export function prepReminders(events: HomeEvent[], ticks: PrepTick[], now: number, url: string): ReminderInput[] {
   const today = toYmd(now);
@@ -388,6 +397,7 @@ export function prepReminders(events: HomeEvent[], ticks: PrepTick[], now: numbe
       recipients: 'all' as const,
       ref: prepReminderRef(t.event.id),
       private: false,
+      source: prepSource(t),
     }));
 }
 
