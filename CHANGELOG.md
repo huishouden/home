@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.16.0](https://github.com/huishouden/home/compare/v1.15.0...v1.16.0) (2026-10-05)
+
+### Features
+
+* hashed assets from the suite's asset CDN (pwa-kit 0.100.0) ([f1dcc6b](https://github.com/huishouden/home/commit/f1dcc6b80b7b6d9c4aef9c4db6ec76822d29b4e8))
+
 ## [1.15.0](https://github.com/huishouden/home/compare/v1.14.3...v1.15.0) (2026-10-05)
 
 ### Features
