@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/huishouden/home/compare/v1.13.2...v1.14.0) (2026-10-05)
+
+
+### Features
+
+* **contacts:** contacts saved before positions get one in the background (kit 0.88.0) ([#60](https://github.com/huishouden/home/issues/60)) ([04d5dd9](https://github.com/huishouden/home/commit/04d5dd9d864164b1f3d7202d6bce4b480af52d7f))
+
 ## [1.13.2](https://github.com/huishouden/home/compare/v1.13.1...v1.13.2) (2026-10-05)
 
 
