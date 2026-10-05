@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.13.0](https://github.com/huishouden/home/compare/v1.12.1...v1.13.0) (2026-10-05)
+
+
+### Features
+
+* **overview:** the house's address with a map link, contacts' distance from home (kit 0.84.0) ([#54](https://github.com/huishouden/home/issues/54)) ([fcba2be](https://github.com/huishouden/home/commit/fcba2be833e0d4e078f28056b27bca6340fa85ad))
+
+
+### Bug Fixes
+
+* the set-home link opens the portal's Household panel (/apps#household) ([#56](https://github.com/huishouden/home/issues/56)) ([a4a4fd0](https://github.com/huishouden/home/commit/a4a4fd07e89fde3586a2a0f8aa3c12abc183c371))
+
 ## [1.12.1](https://github.com/huishouden/home/compare/v1.12.0...v1.12.1) (2026-10-04)
 
 
