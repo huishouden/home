@@ -77,7 +77,7 @@ describe('what Home publishes', () => {
   test('Done is open to everyone (tick fields, and a history entry in their own name); Pause to admins, members and the owner', () => {
     const gutters = byRef(items).get('job:demo-task-gutters')!;
     expect(gutters.done).toEqual({
-      label: 'Done',
+      label: 'Mark done',
       ops: [
         { col: 'homeTasks', id: 'demo-task-gutters', merge: true, data: { lastDone: '$today', due: '$today+6m', updatedAt: '$now' } },
         {
@@ -107,7 +107,7 @@ describe('what Home publishes', () => {
       due: deadline,
       url: `${SUITE_ORIGIN}/home/#overview`,
     });
-    expect(gate.done).toEqual({ label: 'Done', ops: [{ col: 'homeEventPrep', id, data: { done: true, at: '$now', by: '$me' } }], roles: ['admin', 'member', 'helper', 'kid'] });
+    expect(gate.done).toEqual({ label: 'Mark done', ops: [{ col: 'homeEventPrep', id, data: { done: true, at: '$now', by: '$me' } }], roles: ['admin', 'member', 'helper', 'kid'] });
     expect(gate.cancel).toEqual({ label: 'Skip', ops: [{ col: 'homeEventPrep', id, data: { done: true, skipped: true, at: '$now', by: '$me' } }], roles: ['admin', 'member', 'helper', 'kid'] });
   });
 
