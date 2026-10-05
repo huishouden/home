@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Plus, SkipForward } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import { personName } from '@huishouden/pwa-kit/people';
 import { prepWhen, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
@@ -8,13 +8,13 @@ import { describeSchedule } from '@huishouden/pwa-kit/schedule';
 import { activeJobs, dueState, dueText, headline, needsAttention, byDue } from '../lib/upkeep';
 import { EXPIRING_DAYS, byExpiry, warrantyState, warrantyText } from '../lib/warranty';
 import { formatCents } from '@huishouden/pwa-kit/money';
-import { atClock, daysBetween, longDate, midSentence, shortDate, toHhmm, type Ymd, weekdayName, weekday, ymdParts } from '@huishouden/pwa-kit/time';
+import { atClock, daysBetween, longDate, midSentence, shortDate, type Ymd, weekdayName, weekday, ymdParts } from '@huishouden/pwa-kit/time';
 import { capitalize } from '@huishouden/pwa-kit/i18n';
 import { t as tr, useT } from '../i18n';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, DateTile, EventTile, WhoLine } from '../components/bits';
 import { HomeAddress } from '../components/HomeAddress';
-import { cardClass, ghostButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { CompleteButton, CompletionList, CompletionRow, canUndoDone, cardClass, doneLine, ghostButton, overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
 
 export type { TabId } from '../lib/tabs';
 import type { TabId } from '../lib/tabs';
@@ -80,11 +80,15 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
           </button>
         </div>
         {prep.length > 0 && (
-          <ul className="mt-2 mb-3 border-b border-line" aria-label={t('overview.beforeRegular')}>
-            {prep.map((p) => (
-              <PrepRow key={p.id} task={p} now={now} today={today} me={store.me} onToggle={() => onTogglePrep(p)} onSkip={() => onSkipPrep(p)} />
-            ))}
-          </ul>
+          <CompletionList
+            items={prep}
+            isDone={(p) => p.state === 'done'}
+            label={t('overview.beforeRegular')}
+            allDone={t('prep.allDone')}
+            className="mt-2 mb-3 border-b border-line"
+          >
+            {(p) => <PrepRow key={p.id} task={p} now={now} today={today} me={store.me} onToggle={() => onTogglePrep(p)} onSkip={() => onSkipPrep(p)} />}
+          </CompletionList>
         )}
         {!first ? (
           <div className="mt-2">
@@ -239,16 +243,13 @@ function Lead({ task, today, contact, onDone, onEdit }: { task: HomeTask; today:
         <WhoLine contact={contact} />
       </div>
       <div className="mt-3 sm:ml-[76px]">
-        <button type="button" className={primaryButton} onClick={onDone} aria-label={t('a11y.markDone', { name: task.title })}>
-          <Check size={20} /> {t('common.done')}
-        </button>
+        <CompleteButton done={false} name={task.title} onDone={onDone} size="lg" />
       </div>
     </div>
   );
 }
 
 function Row({ task, today, onDone, onEdit }: { task: HomeTask; today: Ymd; onDone: () => void; onEdit: () => void }) {
-  const t = useT();
   const late = dueState(task.due, today).state === 'overdue';
   return (
     <li className="flex items-center gap-4 border-b border-line py-2.5 last:border-b-0">
@@ -257,17 +258,16 @@ function Row({ task, today, onDone, onEdit }: { task: HomeTask; today: Ymd; onDo
         <span className="text-lg leading-snug font-semibold text-ink [overflow-wrap:anywhere]">{task.title}</span>
         <span className={`text-base ${late ? 'font-semibold text-attention' : 'text-muted'}`}>{dueText(task.due, today)}</span>
       </button>
-      <button type="button" className={secondaryButton} onClick={onDone} aria-label={t('a11y.markDone', { name: task.title })}>
-        <Check size={18} /> {t('common.done')}
-      </button>
+      <CompleteButton done={false} name={task.title} onDone={onDone} compact />
     </li>
   );
 }
 
 /**
  * A thing to do before a regular event: "Take the garbage out · tonight by 7 PM", for which event,
- * a big Done toggle and a quiet Skip for when it isn't needed this time; once done or skipped, who
- * did it and when (tap again to undo). Terracotta once late.
+ * an outlined Mark done and a quiet Skip for when it isn't needed this time; once done or skipped,
+ * the check (or skip) badge, who did it and when, and Undo for a few hours (DESIGN.md "Completion").
+ * Terracotta once late.
  */
 function PrepRow({ task, now, today, me, onToggle, onSkip }: { task: PrepTask; now: number; today: Ymd; me: string; onToggle: () => void; onSkip: () => void }) {
   const t = useT();
@@ -276,46 +276,44 @@ function PrepRow({ task, now, today, me, onToggle, onSkip }: { task: PrepTask; n
   const done = state === 'done';
   const skipped = done && !!tick?.skipped;
   const when = prepWhen(task.deadline, now);
-  const detail = done && tick
-    ? t(skipped ? 'prep.skippedBy' : 'prep.doneBy', { name: personName(tick.by, { email: me }), at: atClock(toHhmm(tick.at)) })
-    : state === 'missed'
+  const meta =
+    state === 'missed'
       ? o.time
         ? t('prep.missedAt', { event: midSentence(event.title), at: atClock(o.time) })
         : t('prep.missedToday', { event: midSentence(event.title) })
       : t('prep.for', { what: midSentence(eventWhen(event, o, today)) });
-  const word = skipped ? t('prep.skipped') : t('common.done');
   return (
-    <li className="flex items-center gap-3 py-2.5 sm:gap-4" aria-label={prep.title}>
-      <span className="hidden sm:block">
-        <EventTile kind={event.kind} attention={late} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-lg leading-snug font-semibold text-ink [overflow-wrap:anywhere]">
-          {prep.title}
-          {!done && <span className={late ? 'text-attention' : 'font-medium text-link'}> · {state === 'due' ? t('prep.wasDue', { when }) : when}</span>}
-        </p>
-        <p className={`text-base ${late ? 'font-semibold text-attention' : 'text-muted'}`}>{detail}</p>
-      </div>
-      {!done && state !== 'missed' && (
-        <button type="button" className={`${ghostButton} shrink-0`} onClick={onSkip} aria-label={t('prep.skipName', { name: prep.title })}>
-          {t('prep.skip')}
-        </button>
-      )}
-      <button
-        type="button"
-        aria-pressed={done}
-        aria-label={t('prep.wordName', { word, name: prep.title })}
-        onClick={onToggle}
-        className={`inline-flex min-h-14 shrink-0 items-center gap-2 rounded-xl border px-4 text-lg font-semibold sm:px-5 transition-colors duration-150 ${
-          skipped
-            ? 'border-line bg-sunken text-ink-soft hover:border-stone-400 dark:hover:border-forest-400'
-            : done
-              ? 'border-primary bg-primary text-on-primary hover:bg-primary-hover'
-              : 'border-line bg-surface text-ink hover:border-forest-400'
-        }`}
-      >
-        {skipped ? <SkipForward size={22} /> : <Check size={22} />} {word}
-      </button>
-    </li>
+    <CompletionRow
+      name={prep.title}
+      title={
+        done ? (
+          prep.title
+        ) : (
+          <>
+            {prep.title}
+            <span className={late ? 'text-attention' : 'font-medium text-link'}> · {state === 'due' ? t('prep.wasDue', { when }) : when}</span>
+          </>
+        )
+      }
+      meta={meta}
+      attention={late}
+      done={done}
+      skipped={skipped}
+      status={tick ? doneLine({ by: personName(tick.by, { email: me }), at: tick.at, skipped }) : undefined}
+      leading={
+        <span className="hidden sm:block">
+          <EventTile kind={event.kind} attention={late} />
+        </span>
+      }
+      actions={
+        state !== 'missed' && (
+          <button type="button" className={`${ghostButton} shrink-0`} onClick={onSkip} aria-label={t('prep.skipName', { name: prep.title })}>
+            {t('prep.skip')}
+          </button>
+        )
+      }
+      onDone={onToggle}
+      onUndo={tick && canUndoDone(tick.at, now) ? onToggle : undefined}
+    />
   );
 }

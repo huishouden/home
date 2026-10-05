@@ -66,7 +66,7 @@ test('done with undo', ({ page }) =>
   captureScreenshot(page, 'done', {
     fixedTime,
     prepare: async (p) => {
-      await p.getByRole('button', { name: 'Mark done: Gutter cleaning' }).click();
+      await p.getByRole('button', { name: 'Mark Gutter cleaning done' }).click();
       await expect(p.getByRole('button', { name: 'Undo' })).toBeVisible();
     },
   }));
@@ -132,7 +132,8 @@ test('thing to do before, done', ({ page }) =>
   captureScreenshot(page, 'prep-done', {
     fixedTime,
     prepare: async (p) => {
-      await p.getByRole('button', { name: 'Done: Unlock the side gate' }).click();
+      await p.getByRole('button', { name: 'Mark Unlock the side gate done' }).click();
+      await p.getByRole('button', { name: /All done for now/ }).click();
       await expect(p.getByText('Done by You')).toBeVisible();
     },
   }));

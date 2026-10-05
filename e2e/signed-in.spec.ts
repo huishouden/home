@@ -23,7 +23,7 @@ test('a job one member marks done is in the history for the other', async ({ pag
   await expect(page.getByRole('listitem', { name: title })).toBeVisible();
 
   try {
-    await page.getByRole('button', { name: `Mark done: ${title}` }).click();
+    await page.getByRole('button', { name: `Mark ${title} done` }).click();
     await expect(page.getByText(`Done: ${title}. Next due`)).toBeVisible();
 
     // Saved in the household, not just on this screen: the other member's own browser shows it.
@@ -67,7 +67,7 @@ test('a helper marks a member’s job done but is told who can change it', async
     await expect(page.getByText('Only admins and members can change or delete what someone else added.').first()).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     // Permitted: ticking it off, which the admin sees in the history.
-    await page.getByRole('button', { name: `Mark done: ${title}` }).click();
+    await page.getByRole('button', { name: `Mark ${title} done` }).click();
     await expect(page.getByText(`Done: ${title}. Next due`)).toBeVisible();
     await theirs.getByRole('button', { name: 'History', exact: true }).first().click();
     await expect(theirs.getByRole('listitem', { name: new RegExp(`^${title}, `) })).toBeVisible({ timeout: 20_000 });
@@ -100,21 +100,31 @@ test('a helper ticks off the thing to do before a regular event, and a member se
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(theirs.getByRole('listitem', { name: title })).toBeVisible();
     await theirs.getByRole('button', { name: 'Overview', exact: true }).click();
-    const mine = theirs.getByRole('listitem', { name: prep });
-    await expect(mine.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'false');
+    const mine = theirs.getByRole('listitem').filter({ hasText: prep });
+    await expect(mine.getByRole('button', { name: `Mark ${prep} done` })).toBeVisible();
+    await expect(mine.locator('[aria-pressed]')).toHaveCount(0);
 
     await signInTestUser(page, { email: 'test-helper@example.com' });
-    const row = page.getByRole('listitem', { name: prep });
+    const row = page.getByRole('listitem').filter({ hasText: prep });
     await expect(row).toContainText('was due today by 12 AM', { timeout: 20_000 });
-    await row.getByRole('button', { name: `Done: ${prep}` }).click();
-    await expect(row.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'true');
+    await row.getByRole('button', { name: `Mark ${prep} done` }).click();
+    // The household may have other things to do before; the row is there either way, or folded under All done.
+    const unfold = async (p: typeof page) => {
+      const all = p.getByRole('button', { name: /All done for now/ });
+      if (await all.isVisible()) await all.click();
+    };
+    await unfold(page);
+    await expect(row.getByRole('button', { name: `Undo done for ${prep}` })).toBeVisible();
+    await expect(row.getByRole('button', { name: `Mark ${prep} done` })).toHaveCount(0);
 
     // Saved for the household: the member's own browser shows it done, by the helper.
-    await expect(mine.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
+    await expect(theirs.getByRole('button', { name: `Mark ${prep} done` })).toHaveCount(0, { timeout: 20_000 });
+    await unfold(theirs);
+    await expect(mine).toHaveAttribute('data-completion', 'done');
     await expect(mine).toContainText('Done by Test');
     // Undo is the helper's own to make.
-    await row.getByRole('button', { name: `Done: ${prep}` }).click();
-    await expect(mine.getByRole('button', { name: `Done: ${prep}` })).toHaveAttribute('aria-pressed', 'false', { timeout: 20_000 });
+    await row.getByRole('button', { name: `Undo done for ${prep}` }).click();
+    await expect(mine.getByRole('button', { name: `Mark ${prep} done` })).toBeVisible({ timeout: 20_000 });
   } finally {
     await theirs.getByRole('button', { name: 'Regular', exact: true }).first().click();
     await theirs.getByRole('button', { name: `Edit the schedule: ${title}` }).click();

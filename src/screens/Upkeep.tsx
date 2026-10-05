@@ -1,11 +1,11 @@
-import { Check, Pencil, Play, Plus } from 'lucide-react';
+import { Pencil, Play, Plus } from 'lucide-react';
 import type { HomeTask } from '../lib/model';
 import { describeSchedule } from '@huishouden/pwa-kit/schedule';
 import { SOON_DAYS, activeJobs, byDue, dueState, dueText, isPaused, lastDoneText } from '../lib/upkeep';
 import { shortDate, toYmd, type Ymd } from '@huishouden/pwa-kit/time';
 import type { HomeStore } from '../data/types';
 import { CategoryTile, WhoLine } from '../components/bits';
-import { cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
+import { CompleteButton, cardClass, iconButton, overline, primaryButton, secondaryButton } from '@huishouden/pwa-kit/react/ui';
 import { RoleNote } from '@huishouden/pwa-kit/react/roles';
 import { mayChange } from '../data/types';
 import { AddToCalendar } from '@huishouden/pwa-kit/react/calendar';
@@ -70,9 +70,7 @@ export function Upkeep({ store, today, onAdd, onEdit, onDone, onResume }: {
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <AddToCalendar entry={jobEntry(job, contacts)} compact />
-                    <button type="button" className={secondaryButton} onClick={() => onDone(job)} aria-label={t('a11y.markDone', { name: job.title })}>
-                      <Check size={18} /> <span className="hidden sm:inline">{t('common.done')}</span>
-                    </button>
+                    <CompleteButton done={false} name={job.title} onDone={() => onDone(job)} compact />
                     {mayChange(store, job) && (
                       <button type="button" className={iconButton.replace('inline-flex', 'hidden sm:inline-flex')} onClick={() => onEdit(job)} aria-label={t('a11y.edit', { name: job.title })}>
                         <Pencil size={18} />
