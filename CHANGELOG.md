@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.1](https://github.com/huishouden/home/compare/v1.13.0...v1.13.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **overview:** done and not-done things look different (kit 0.86.0 completion pattern) ([#57](https://github.com/huishouden/home/issues/57)) ([ee1b06d](https://github.com/huishouden/home/commit/ee1b06d20556b4b0d3e82fd8b1a03ffe15a3515a))
+
 ## [1.13.0](https://github.com/huishouden/home/compare/v1.12.1...v1.13.0) (2026-10-05)
 
 
