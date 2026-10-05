@@ -37,7 +37,7 @@ test('the thing to do before shows in Needs doing; Mark done records who and whe
   await expect(gate).toHaveAttribute('data-completion', 'done');
   await expect(mark).toHaveCount(0);
   await expect(undo).toBeVisible();
-  await expect(gate).toContainText('Done by You · 10:30 AM');
+  await expect(gate).toContainText('Done by you · 10:30 AM');
   await expect(gate).not.toContainText('tonight by 7 PM');
   await expect(card.locator('[aria-pressed]')).toHaveCount(0);
 

@@ -299,7 +299,7 @@ function PrepRow({ task, now, today, me, onToggle, onSkip }: { task: PrepTask; n
       attention={late}
       done={done}
       skipped={skipped}
-      status={tick ? doneLine({ by: personName(tick.by, { email: me }), at: tick.at, skipped }) : undefined}
+      status={tick ? doneLine({ by: personName(tick.by, { email: me }), byMe: tick.by.toLowerCase() === me.toLowerCase(), at: tick.at, skipped }) : undefined}
       leading={
         <span className="hidden sm:block">
           <EventTile kind={event.kind} attention={late} />

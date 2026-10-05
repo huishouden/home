@@ -134,7 +134,7 @@ test('thing to do before, done', ({ page }) =>
     prepare: async (p) => {
       await p.getByRole('button', { name: 'Mark Unlock the side gate done' }).click();
       await p.getByRole('button', { name: /All done for now/ }).click();
-      await expect(p.getByText('Done by You')).toBeVisible();
+      await expect(p.getByText('Done by you')).toBeVisible();
     },
   }));
 

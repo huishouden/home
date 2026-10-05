@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.2](https://github.com/huishouden/home/compare/v1.13.1...v1.13.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* **overview:** "Done by you" in every language (kit 0.87.0) ([#59](https://github.com/huishouden/home/issues/59)) ([f915050](https://github.com/huishouden/home/commit/f91505015313b2ed8e62f0b5ceec3a010c7a6087))
+
 ## [1.13.1](https://github.com/huishouden/home/compare/v1.13.0...v1.13.1) (2026-10-05)
 
 
