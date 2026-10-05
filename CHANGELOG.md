@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.3](https://github.com/huishouden/home/compare/v1.14.2...v1.14.3) (2026-10-05)
+
+### Tests
+
+* signed-in tests on a household of the run's own; all but the portal To-do round trip run on the emulators (`bun run e2e:emulator`) ([#48](https://github.com/huishouden/home/issues/48))
+
 ## [1.14.2](https://github.com/huishouden/home/compare/v1.14.1...v1.14.2) (2026-10-05)
 
 ### Other
