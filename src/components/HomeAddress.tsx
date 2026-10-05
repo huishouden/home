@@ -18,7 +18,7 @@ export function HomeAddress({ canSetHome }: { canSetHome: boolean }) {
     return canSetHome ? (
       <p className="flex items-center gap-1.5 border-t border-line pt-3 text-base text-muted">
         <MapPin size={18} className="shrink-0" aria-hidden="true" />
-        <a className={linkClass} href={`${PORTAL_URL}#household`}>
+        <a className={linkClass} href={`${PORTAL_URL}apps#household`}>
           {t('address.setInPortal')}
         </a>
       </p>

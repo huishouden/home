@@ -19,7 +19,7 @@ test('the overview shows the home address with a link to the map', async ({ page
 test('without a home, admins and members get a link to set it in the portal', async ({ page }) => {
   await page.goto('./?home=none');
   await expect(page.getByRole('region', { name: 'Home address' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Set your home address in the portal' })).toHaveAttribute('href', '/#household');
+  await expect(page.getByRole('link', { name: 'Set your home address in the portal' })).toHaveAttribute('href', '/apps#household');
 });
 
 test('a helper without a home sees no link they could not use', async ({ page }) => {
