@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.1](https://github.com/huishouden/home/compare/v1.14.0...v1.14.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **todos:** the portal's to-do button says what it does, "Mark done" not "Done" ([#64](https://github.com/huishouden/home/issues/64)) ([5a30bd2](https://github.com/huishouden/home/commit/5a30bd2d92c289615611f2b5021d62c9068c782a))
+
 ## [1.14.0](https://github.com/huishouden/home/compare/v1.13.2...v1.14.0) (2026-10-05)
 
 
