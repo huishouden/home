@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.16.1](https://github.com/huishouden/home/compare/v1.16.0...v1.16.1) (2026-10-05)
+
+### Other
+
+* Maintenance
+
 ## [1.16.0](https://github.com/huishouden/home/compare/v1.15.0...v1.16.0) (2026-10-05)
 
 ### Features
