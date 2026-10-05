@@ -188,7 +188,7 @@ test('the thing to do before can be skipped, shows as skipped, and the skip undo
   await expect(page.getByText('Skipped: Unlock the side gate')).toBeVisible();
   await card.getByRole('button', { name: /All done for now/ }).click();
   await expect(row).toHaveAttribute('data-completion', 'skipped');
-  await expect(row).toContainText('Skipped by You · 10:30 AM');
+  await expect(row).toContainText('Skipped by you · 10:30 AM');
   await row.getByRole('button', { name: 'Undo skip for Unlock the side gate' }).click();
   await expect(row.getByRole('button', { name: 'Mark Unlock the side gate done' })).toBeVisible();
 });
