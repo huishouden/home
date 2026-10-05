@@ -76,7 +76,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           setContacts(c);
           answered('contacts');
         },
-        { app: APP, restricted, onError: (e) => fail(t('live.loadContacts'))(e) },
+        { app: APP, restricted, backfillPositions: true, onError: (e) => fail(t('live.loadContacts'))(e) },
       ),
     ];
     return () => unsubs.forEach((u) => u());
