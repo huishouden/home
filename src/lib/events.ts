@@ -12,7 +12,7 @@ import {
 import { HOUR, addDays, atClock, atTime, clockWords, daysBetween, formatDayShort, formatYmd, midSentence, shortDate, toYmd, weekday, weekdayName, weekdayShort, ymdParts, type Hhmm, type Ymd } from '@huishouden/pwa-kit/time';
 import { capitalize, type Lang } from '@huishouden/pwa-kit/i18n';
 import { t } from '../i18n';
-import { prepTickId, type EventInput, type EventKind, type HomeEvent, type PrepTick } from './model';
+import { EVENTS_COL, PREP_COL, prepTickId, type EventInput, type EventKind, type HomeEvent, type PrepTick } from './model';
 
 // Regular events (garbage pickup, a lawn service) and the things to do before them: what the
 // screens list, what Needs doing shows, and what goes on the household agenda and into reminders.
@@ -374,7 +374,7 @@ export const prepReminderRef = (eventId: string) => `home:prep:${eventId}`;
  * exists. Ticked or skipped from the portal's To-do list, or the event removed, it is deleted unsent.
  */
 export const prepSource = (task: Pick<PrepTask, 'id' | 'event'>): ReminderSource => ({
-  checks: [{ doc: `homeEventPrep/${task.id}`, absent: true }, { doc: `homeEvents/${task.event.id}` }],
+  checks: [{ doc: `${PREP_COL}/${task.id}`, absent: true }, { doc: `${EVENTS_COL}/${task.event.id}` }],
 });
 
 /** A reminder at the deadline of each thing to do before that asks for one, not yet ticked, in the next two weeks. */

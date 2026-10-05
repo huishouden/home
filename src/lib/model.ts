@@ -150,6 +150,10 @@ export interface PrepTick extends PrepTickData {
 
 export const prepTickId = (eventId: string, original: Ymd) => `${eventId}_${original}`;
 
+/** Where regular events and their ticks live under the household (data/actions `COLLECTIONS` uses these). */
+export const EVENTS_COL = 'homeEvents';
+export const PREP_COL = 'homeEventPrep';
+
 export const LIMITS = { title: 120, notes: 1000, who: 120, item: 120, details: 200, url: 500 } as const;
 
 export const TASK_KEYS = ['title', 'category', 'schedule', 'due', 'lastDone', 'contactId', 'notes', 'calendarEventId', 'calendarLink', 'pausedAt', 'createdAt', 'updatedAt', 'by'] as const;
