@@ -272,5 +272,10 @@
   "address.approximate": "bij benadering",
   "address.map": "Kaart",
   "address.openMap": "{address} openen op de kaart",
-  "address.setInPortal": "Vul je huisadres in in het portaal"
+  "address.setInPortal": "Vul je huisadres in in het portaal",
+  "push.offText": "Krijg hier een melding voor wat je vóór een gebeurtenis moet doen, zoals de vuilnis buitenzetten, en voor klusjes in huis die aan de beurt zijn.",
+  "push.onText": "Aan. Dit apparaat meldt wat je vóór een gebeurtenis moet doen en welke klusjes in huis aan de beurt zijn.",
+  "push.title": "Meldingen op dit apparaat",
+  "push.turnOn": "Aanzetten",
+  "push.sampleNote": "Log in om meldingen aan te zetten."
 }

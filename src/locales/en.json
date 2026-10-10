@@ -272,5 +272,10 @@
   "address.approximate": "approximate",
   "address.map": "Map",
   "address.openMap": "Open {address} on the map",
-  "address.setInPortal": "Set your home address in the portal"
+  "address.setInPortal": "Set your home address in the portal",
+  "push.offText": "Get a notification here for the things to do before an event, like taking the garbage out, and for house jobs that are due.",
+  "push.onText": "On. This device tells you about the things to do before an event and about house jobs that are due.",
+  "push.title": "Notifications on this device",
+  "push.turnOn": "Turn on",
+  "push.sampleNote": "Sign in to turn on notifications."
 }
