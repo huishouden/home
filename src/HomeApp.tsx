@@ -48,6 +48,8 @@ interface Props {
   banner?: ReactNode;
   /** The signed-in person's role; the demo has none (everything allowed). */
   role?: RoleState;
+  /** The device's notifications switch, shown under the home address. */
+  deviceSettings?: ReactNode;
 }
 
 // On phones the four primaries sit in the bottom bar; Warranties and Contacts are under More.
@@ -66,7 +68,7 @@ type RegularOffer = { series: CalendarSeries; prep?: PrepOffer };
 type Editing<T> = { item: T | null; initial?: Partial<ServiceInput> } | null;
 
 /** Everything inside the frame once there is data to show (live or sample). */
-export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, role }: Props) {
+export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, notify, clearToast, banner, role, deviceSettings }: Props) {
   const t = useT();
   const { now, read } = useClock();
   const today = toYmd(now);
@@ -200,6 +202,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         onTogglePrep={togglePrep}
         onSkipPrep={skipPrep}
         canSetHome={maySetHome(role, store.helping)}
+        deviceSettings={deviceSettings}
         onOpenOccurrence={(event, o) => setOccurrence({ event, occurrence: o })}
       />
     );

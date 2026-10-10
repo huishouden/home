@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import { personName } from '@huishouden/pwa-kit/people';
 import { prepWhen, type Occurrence } from '@huishouden/pwa-kit/schedule';
@@ -37,12 +38,14 @@ interface Props {
   onOpenOccurrence: (event: HomeEvent, occurrence: Occurrence) => void;
   /** Admins and members, who can set the household's home in the portal. */
   canSetHome: boolean;
+  /** The device's notifications switch. */
+  deviceSettings?: ReactNode;
 }
 
 const contactOf = (contacts: Contact[], id?: string) => (id ? contacts.find((c) => c.id === id) : undefined);
 
 /** What the house needs now, readable from across the room: the next job first, then booked visits, warranties and the house's address. */
-export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onSkipPrep, onOpenOccurrence, canSetHome }: Props) {
+export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEntry, onEditWarranty, onOpen, prep, now, onTogglePrep, onSkipPrep, onOpenOccurrence, canSetHome, deviceSettings }: Props) {
   const t = useT();
   const { tasks, log, warranties, contacts, events } = store.data;
   const regular = nextUp(events, today, now).slice(0, 2);
@@ -113,6 +116,7 @@ export function Overview({ store, today, onDone, onEditTask, onAddTask, onEditEn
         )}
         <div className="mt-auto shrink-0 pt-5">
           <HomeAddress canSetHome={canSetHome} />
+          {deviceSettings && <div className="mt-3 border-t border-line pt-3">{deviceSettings}</div>}
         </div>
       </section>
 
