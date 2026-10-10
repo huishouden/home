@@ -276,6 +276,5 @@
   "push.offText": "Get a notification here for the things to do before an event, like taking the garbage out, and for house jobs that are due.",
   "push.onText": "On. This device tells you about the things to do before an event and about house jobs that are due.",
   "push.title": "Notifications on this device",
-  "push.turnOn": "Turn on",
   "push.sampleNote": "Sign in to turn on notifications."
 }

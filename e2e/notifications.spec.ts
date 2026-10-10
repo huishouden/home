@@ -8,7 +8,7 @@ test('the overview offers notifications on this device, as a note in the sample'
   await page.goto('./');
   const card = page.getByRole('region', { name: 'Notifications on this device' });
   await expect(card).toContainText('things to do before an event');
-  await expect(card.getByRole('button', { name: 'Turn on' })).toBeDisabled();
+  await expect(card.getByRole('button')).toHaveCount(0);
   await expect(card).toContainText('Sign in to turn on notifications.');
 });
 

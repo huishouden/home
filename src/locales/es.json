@@ -276,6 +276,5 @@
   "push.offText": "Recibe aquí una notificación de lo que hay que hacer antes de un evento, como sacar la basura, y de las tareas de la casa que toca hacer.",
   "push.onText": "Activadas. Este dispositivo te avisa de lo que hay que hacer antes de un evento y de las tareas de la casa que tocan.",
   "push.title": "Notificaciones en este dispositivo",
-  "push.turnOn": "Activar",
   "push.sampleNote": "Inicia sesión para activar las notificaciones."
 }
