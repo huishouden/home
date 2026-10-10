@@ -1,7 +1,6 @@
-import { Bell } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { NotificationsCard as KitNotificationsCard } from '@huishouden/pwa-kit/react/push';
-import { overline, primaryButton } from '@huishouden/pwa-kit/react/ui';
+import { overline } from '@huishouden/pwa-kit/react/ui';
 import { db } from '../data/firebase';
 import { AGENDA_APP } from '../lib/agenda';
 import { useT } from '../i18n';
@@ -32,13 +31,8 @@ export function NotificationsCard({ live }: { live?: { householdId: string; user
     );
   return (
     <section aria-label={t('push.title')}>
-      <h3 className={overline}>{t('push.title')}</h3>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <p className="min-w-0 flex-1 text-base text-muted">{t('push.offText')}</p>
-        <button type="button" className={primaryButton} disabled>
-          <Bell size={18} /> {t('push.turnOn')}
-        </button>
-      </div>
+      <p className={overline}>{t('push.title')}</p>
+      <p className="mt-2 text-base text-muted">{t('push.offText')}</p>
       <p className="mt-2 text-sm text-muted">{t('push.sampleNote')}</p>
     </section>
   );
