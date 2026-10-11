@@ -47,9 +47,9 @@ describe('in Spanish and Dutch', () => {
     await setLangForTests('en');
     const now = atTime('2031-10-22', '12:00');
     const [r] = await localizeReminders(() => prepReminders([trash], [], now, 'https://example.com/home/'));
-    expect(r.texts.en).toEqual({ title: 'Sacar la basura', body: 'Recolección de basura tomorrow at 7 AM' });
-    expect(r.texts.es?.body).toBe('Recolección de basura mañana a las 7 a.m.');
-    expect(r.texts.nl?.body).toBe('Recolección de basura morgen om 7:00');
+    expect({ title: r.title, body: r.body }).toEqual({ title: 'Sacar la basura', body: 'Recolección de basura tomorrow at 7 AM' });
+    expect(r.texts?.es?.body).toBe('Recolección de basura mañana a las 7 a.m.');
+    expect(r.texts?.nl?.body).toBe('Recolección de basura morgen om 7:00');
   });
 });
 
