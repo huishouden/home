@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "bun test src",
-    "e2e": "playwright test e2e/smoke.spec.ts e2e/upkeep.spec.ts e2e/phone.spec.ts e2e/regular.spec.ts e2e/history.spec.ts e2e/warranties.spec.ts e2e/contacts.spec.ts e2e/address.spec.ts e2e/contact-import.spec.ts e2e/calendar.spec.ts e2e/i18n.spec.ts",
+    "e2e": "playwright test e2e/smoke.spec.ts e2e/upkeep.spec.ts e2e/phone.spec.ts e2e/regular.spec.ts e2e/history.spec.ts e2e/warranties.spec.ts e2e/contacts.spec.ts e2e/address.spec.ts e2e/contact-import.spec.ts e2e/calendar.spec.ts e2e/i18n.spec.ts e2e/notifications.spec.ts",
     "e2e:signed-in": "playwright test e2e/signed-in.spec.ts",
     "screenshots": "playwright test e2e/screenshots.spec.ts",
     "icons": "pwa-logo wrench public/icon.svg && pwa-icons --background=#1b4332",

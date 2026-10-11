@@ -12,6 +12,7 @@ import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
 import { HomeApp } from './HomeApp';
 import { Header } from './components/Header';
 import { cardClass, primaryButton, SampleBanner, useToast } from '@huishouden/pwa-kit/react/ui';
+import { NotificationsCard, VAPID_PUBLIC_KEY } from './components/NotificationsCard';
 import { PORTAL_URL } from './lib/portal';
 import { t, useT } from './i18n';
 
@@ -98,7 +99,7 @@ function LiveApp({ household, user, ...frame }: FrameProps & { household: Househ
   const read = useCallback(() => Date.now(), []);
   return (
     <ClockProvider read={read}>
-      <HomeApp store={store} user={user} {...frame} toast={toast} notify={notify} clearToast={clear} role={role} />
+      <HomeApp store={store} user={user} {...frame} toast={toast} notify={notify} clearToast={clear} role={role} deviceSettings={VAPID_PUBLIC_KEY ? <NotificationsCard live={{ householdId: household.id, user }} /> : undefined} />
     </ClockProvider>
   );
 }
@@ -133,7 +134,7 @@ function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => n
   const banner = (
     <SampleBanner text={t('demo.banner')} notice={signInError ?? undefined} />
   );
-  return <HomeApp store={store} user={null} {...frame} toast={toast} notify={notify} clearToast={clear} banner={banner} />;
+  return <HomeApp store={store} user={null} {...frame} toast={toast} notify={notify} clearToast={clear} banner={banner} deviceSettings={<NotificationsCard />} />;
 }
 
 function Plain({ user, children, hideSignIn, ...frame }: FrameProps & { user: User | null; children?: ReactNode; hideSignIn?: boolean }) {

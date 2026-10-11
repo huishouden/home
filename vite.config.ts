@@ -18,6 +18,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     pwaApp({
+      // Home writes reminders (things to do before an event, upkeep due); the push worker sends them.
+      push: true,
       // Home's path on the suite's one site (pwa-kit docs/one-site.md).
       base: '/home/',
       name: 'Huishouden Home',

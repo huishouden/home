@@ -69,7 +69,7 @@ chosen weekdays, every few weeks, monthly (on a day, or the nth or last weekday)
 - **Something to do before.** "Take the garbage out, the evening before at 7 PM" shows in Needs
   doing on the overview from 14 hours ahead, with a big Done toggle, who did it and when, and Undo.
   Not done by its time it turns terracotta; once the event begins it shows as missed for the rest of
-  that day. With a reminder on, every device gets a push notification at that time, unless it is
+  that day. With a reminder on, every device that turned notifications on gets a push notification at that time (the switch is "Notifications on this device", under the house's address on the overview; one switch per device covers every Huishouden app, managed in the portal's Notifications page), unless it is
   already done (ticked here or on the portal's To-do list) or the event is removed by then.
 - **On the household calendar.** Each occurrence of the next 60 days goes on the portal's Calendar
   and Today (lawn, cleaning and HOA as appointments, pickups as other), and each thing to do before
