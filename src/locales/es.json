@@ -61,7 +61,7 @@
   "prep.yard": "Sacar los residuos de jardín",
   "prep.lawn": "Abrir el portón lateral",
   "prep.cleaning": "Ordenar",
-  "merge.pickupTitle": "Recogida de {parts}",
+  "merge.pickupTitle": "Recolección de {parts}",
   "merge.pickup.trash": "basura",
   "merge.pickup.recycling": "reciclaje",
   "merge.pickup.yard": "residuos de jardín",
