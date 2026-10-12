@@ -1,28 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where, type Query } from 'firebase/firestore';
 import { commitOps } from '@huishouden/pwa-kit/firestore';
-import { localizeAgenda, removeAgenda, replaceAgenda, syncAgenda } from '@huishouden/pwa-kit/agenda';
-import { localizeReminders, syncReminders } from '@huishouden/pwa-kit/reminders';
-import { localizeTodos, syncTodos } from '@huishouden/pwa-kit/todos';
 import { t } from '../i18n';
-import { todoItems } from '../lib/todos';
 import { householdContacts, watchContacts, type Contact } from '@huishouden/pwa-kit/contacts';
-import { AGENDA_APP, APP_URL, agendaItems, jobAgenda, jobRef, screen, visitAgenda, visitRef, warrantyAgenda, warrantyRef, type AgendaEntry } from '../lib/agenda';
-import { eventAgenda, eventRef, prepAgenda, prepReminders, prepRef } from '../lib/events';
 import { APP } from '../lib/contacts';
-import type { HomeData } from '../lib/demo';
 import type { HomeEvent, HomeTask, PrepTick, ServiceEntry, Warranty } from '../lib/model';
 import { DAY } from '@huishouden/pwa-kit/time';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { db } from './firebase';
-import { COLLECTIONS, applyOps, createActions, type Backend, type DataKey, type Op } from './actions';
+import { COLLECTIONS, applyOps, createActions, type Backend, type DataKey } from './actions';
+import { itemsOf, publishChanges, publishOnOpen, publishRef, publishTodos } from './publish';
 import type { HomeActions, HomeStore } from './types';
 
 const { tasks: TASKS, log: LOG, warranties: WARRANTIES, events: EVENTS, prep: PREP } = COLLECTIONS;
 /** Ticks older than this are history nobody looks at: not loaded. */
 const PREP_LOAD_DAYS = 21;
-const REGULAR_URL = screen('regular');
-const HOME_URL = APP_URL;
 /** The to-do list catches up this long after the last change. */
 const TODO_DELAY_MS = 3000;
 
@@ -90,16 +82,11 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
   useEffect(() => {
     if (!allLoaded || synced.current) return;
     synced.current = true;
-    const now = Date.now();
     // Every language's words, so each member reads the agenda, to-dos and reminders in their own.
-    localizeAgenda(() => agendaItems(current.current, now))
-      .then((items) => syncAgenda(db, householdId, AGENDA_APP, items, { by: me, restricted, now }))
-      .catch((e) => console.warn("Couldn't update the household agenda", e));
-    // Reminders for the things to do before regular events, topped up for the next two weeks.
-    const { events, prep } = current.current;
-    localizeReminders(() => prepReminders(events, prep, now, HOME_URL))
-      .then((items) => syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted }))
-      .catch((e) => console.warn("Couldn't schedule reminders", e));
+    void publishOnOpen(db, householdId, me, current.current, Date.now(), { restricted }).then(({ agenda, reminders }) => {
+      if (agenda.status === 'rejected') console.warn("Couldn't update the household agenda", agenda.reason);
+      if (reminders.status === 'rejected') console.warn("Couldn't schedule reminders", reminders.reason);
+    });
   }, [allLoaded, householdId, me, restricted]);
 
   // The household to-do list follows Home's data: on open, and a few seconds after any change
@@ -108,11 +95,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     if (!allLoaded) return;
     const timer = setTimeout(
       () => {
-        const data = current.current;
-        const now = Date.now();
-        localizeTodos(() => todoItems(data, now))
-          .then((items) => syncTodos(db, householdId, AGENDA_APP, items, { by: me, restricted }))
-          .catch((e) => console.warn("Couldn't update the household to-do list", e));
+        publishTodos(db, householdId, me, current.current, Date.now(), { restricted }).catch((e) => console.warn("Couldn't update the household to-do list", e));
       },
       todosSynced.current ? TODO_DELAY_MS : 0,
     );
@@ -123,60 +106,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
   const actions = useMemo<HomeActions>(() => {
     // The agenda follows each save; a failure there never fails the save (the next open repairs it).
     const warn = (e: unknown) => console.warn("Couldn't update the household agenda", e);
-    const publish = (ref: string, build: () => AgendaEntry[]) =>
-      void localizeAgenda(build)
-        .then((items) => replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }))
-        .catch(warn);
-    const unpublish = (ref: string) => void removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }).catch(warn);
     const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, t('live.saveFailed'))));
-
-    /** A record's agenda items, by ref, in `data`: none when it isn't there. */
-    const itemsOf = (data: HomeData, col: DataKey, id: string, now: number): [string, AgendaEntry[]][] => {
-      const { contacts } = data;
-      if (col === 'tasks') {
-        const t = data.tasks.find((x) => x.id === id);
-        return [[jobRef(id), t ? jobAgenda(t, contacts, now) : []]];
-      }
-      if (col === 'log') {
-        const e = data.log.find((x) => x.id === id);
-        return [[visitRef(id), e ? visitAgenda(e, contacts, now) : []]];
-      }
-      if (col === 'warranties') {
-        const w = data.warranties.find((x) => x.id === id);
-        return [[warrantyRef(id), w ? warrantyAgenda(w, now) : []]];
-      }
-      // An event's occurrences and its things to do before; a tick changes its event's prep.
-      const eventId = col === 'events' ? id : id.slice(0, id.lastIndexOf('_'));
-      const event = data.events.find((x) => x.id === eventId);
-      return [
-        [eventRef(eventId), event ? eventAgenda(event, contacts, now, REGULAR_URL) : []],
-        [prepRef(eventId), event ? prepAgenda(event, data.prep, now, REGULAR_URL) : []],
-      ];
-    };
-
-    /**
-     * After a write: replaces the agenda items of each record it touched, removes those of deleted
-     * ones, and tops up the reminders when an event or a tick changed. Records with no items before
-     * or after are left alone.
-     */
-    const publishChanges = (before: HomeData, after: HomeData, ops: Op[]) => {
-      const now = Date.now();
-      const done = new Set<string>();
-      for (const op of ops) {
-        const gone = (op.col === 'events' && !after.events.some((e) => e.id === op.id)) || (op.col !== 'prep' && !op.data);
-        const was = new Map(itemsOf(before, op.col, op.id, now));
-        for (const [ref, items] of itemsOf(after, op.col, op.id, now)) {
-          if (done.has(ref)) continue;
-          done.add(ref);
-          if (gone) unpublish(ref);
-          else if (items.length || was.get(ref)?.length) publish(ref, () => new Map(itemsOf(after, op.col, op.id, now)).get(ref) ?? []);
-        }
-      }
-      if (ops.some((op) => op.col === 'events' || op.col === 'prep'))
-        void localizeReminders(() => prepReminders(after.events, after.prep, now, HOME_URL))
-          .then((items) => syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted }))
-          .catch((e) => console.warn("Couldn't schedule reminders", e));
-    };
 
     const contacts = householdContacts(db, householdId, APP, me, report);
     const backend: Backend = {
@@ -184,7 +114,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
       write: (ops) => {
         report(commitOps(db, base, ops, (col) => COLLECTIONS[col]));
         const before = current.current;
-        publishChanges(before, applyOps(before, ops), ops);
+        void publishChanges(db, householdId, me, before, applyOps(before, ops), ops, Date.now(), { restricted, onError: warn });
       },
       contacts: {
         ...contacts,
@@ -202,7 +132,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           ];
           for (const [col, recordId] of refs) {
             const [ref] = itemsOf(renamed, col, recordId, now)[0];
-            publish(ref, () => itemsOf(renamed, col, recordId, now)[0][1]);
+            publishRef(db, householdId, me, ref, () => itemsOf(renamed, col, recordId, now)[0][1], { restricted }).catch(warn);
           }
         },
       },
