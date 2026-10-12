@@ -3,7 +3,7 @@ import { setLangForTests } from '@huishouden/pwa-kit/i18n';
 import { localizeReminders } from '@huishouden/pwa-kit/reminders';
 import { atTime } from '@huishouden/pwa-kit/time';
 import { calendarWords, guessCategory } from './calendarImport';
-import { eventPresets, eventWhen, guessEventKind, occurrenceWords, prepReminders, REGULAR_WORDS } from './events';
+import { collectionMerge, eventPresets, eventWhen, guessEventKind, occurrenceWords, prepReminders, REGULAR_WORDS } from './events';
 import { lastDoneText } from './upkeep';
 import { categoryLabel, type HomeEvent } from './model';
 import { roleLabel } from './contacts';
@@ -77,5 +77,15 @@ describe('the household’s own words, in any app language', () => {
     expect(calendarWords('en')).not.toContain('basura');
     expect(calendarWords('es')).toEqual(expect.arrayContaining(['garbage', 'basura', 'reciclaje', 'césped', 'jardín']));
     expect(calendarWords('nl')).toEqual(expect.arrayContaining(['trash', 'afval', 'vuilnis', 'oud papier', 'gft', 'plastic', 'grasmaaien', 'tuin']));
+  });
+});
+
+describe('pickups that merge, in each language', () => {
+  test('the parts and titles read naturally once listed', async () => {
+    await setLangForTests('nl', ['nl-NL']);
+    expect(collectionMerge('trash', 'prep')).toEqual({ key: 'collection:prep', part: 'het afval', title: 'Zet {parts} buiten' });
+    expect(collectionMerge('recycling', 'pickup')).toEqual({ key: 'collection', part: 'recycling', title: '{parts} ophalen' });
+    await setLangForTests('es', ['es-MX']);
+    expect(collectionMerge('yard waste', 'prep')).toEqual({ key: 'collection:prep', part: 'los residuos de jardín', title: 'Saca {parts}' });
   });
 });

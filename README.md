@@ -111,6 +111,11 @@ Items are all-day, cover 30 days back to 180 days ahead (overdue jobs whatever t
 `#upkeep`, `#history` or `#warranties`. Each save updates its record's items; opening the app
 reconciles everything. The signed-out sample house writes nothing. The mapping is `src/lib/agenda.ts`.
 
+Garbage, recycling and yard-waste pickups carry a `merge` (`@huishouden/pwa-kit/merge`, `collectionMerge`
+in `src/lib/events.ts`), and so do the things to do the night before and their reminders. Pickups on the
+same morning show as one in the portal, the household's calendars and notifications: "Garbage and
+recycling pickup", "Take the garbage and recycling out". Each keeps its own record and to-do.
+
 It also publishes its open things to the household to-do list (`households/{householdId}/todos`,
 through `@huishouden/pwa-kit/todos`), which the portal's To-do tab shows with Done and a cancel:
 

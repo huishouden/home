@@ -5,6 +5,7 @@ import { looksLikePrep, recurringSeries, seriesCover, similarTitles, type Calend
 import { allDayStart, inAgendaWindow } from '@huishouden/pwa-kit/agenda';
 import type { Contact } from '@huishouden/pwa-kit/contacts';
 import type { ReminderInput, ReminderSource } from '@huishouden/pwa-kit/reminders';
+import type { MergeSpec } from '@huishouden/pwa-kit/merge';
 import {
   describeRule, eventOccurrences, prepState, prepWindow, pruneChanges, weekdayOfMonth, withChange,
   type EventPrep, type EventRule, type Nth, type Occurrence, type OccurrenceChange, type PrepState,
@@ -309,6 +310,21 @@ export function eventEdit(event: HomeEvent): AgendaEdit {
 }
 
 /**
+ * Pickups the same morning (garbage, recycling, yard waste) show as one everywhere the household sees
+ * them (@huishouden/pwa-kit/merge): "Garbage and recycling pickup", and the night before "Take the
+ * garbage and recycling out", one notification. The words are the kind's, not the event's own title.
+ */
+const COLLECTION_KINDS = { trash: 'trash', recycling: 'recycling', 'yard waste': 'yard' } as const;
+
+export function collectionMerge(kind: EventKind, what: 'pickup' | 'prep'): MergeSpec | undefined {
+  const part = COLLECTION_KINDS[kind as keyof typeof COLLECTION_KINDS];
+  if (!part) return undefined;
+  return what === 'pickup'
+    ? { key: 'collection', part: t(`merge.pickup.${part}`), title: t('merge.pickupTitle', { parts: '{parts}' }) }
+    : { key: 'collection:prep', part: t(`merge.prep.${part}`), title: t('merge.prepTitle', { parts: '{parts}' }) };
+}
+
+/**
  * Each occurrence of the next 60 days, on its day (at its time, or all day), with no status: it just
  * happens. Each carries the schedule (`series`), so a calendar shows one repeating event, and the
  * edits that bring changes made there back.
@@ -319,6 +335,7 @@ export function eventAgenda(event: HomeEvent, contacts: Contact[], now: number, 
   const who = event.contactId ? contacts.find((c) => c.id === event.contactId)?.name : undefined;
   const minutes = EVENT_MINUTES[event.kind] ?? 60;
   const edit = eventEdit(event);
+  const merge = collectionMerge(event.kind, 'pickup');
   return occurrencesOf(event, today, through)
     .map((o): AgendaEntry => {
       const start = o.time ? atTime(o.date, o.time) : allDayStart(o.date);
@@ -332,6 +349,7 @@ export function eventAgenda(event: HomeEvent, contacts: Contact[], now: number, 
         url,
         series: { rule: event.rule, ...(event.time ? { time: event.time } : {}), minutes, original: o.original, through },
         edit,
+        ...(merge ? { merge } : {}),
       };
     })
     .filter((i) => inAgendaWindow(i, now));
@@ -345,6 +363,7 @@ export function eventAgenda(event: HomeEvent, contacts: Contact[], now: number, 
 export function prepAgenda(event: HomeEvent, ticks: PrepTick[], now: number, url: string): AgendaEntry[] {
   if (!event.prep) return [];
   const today = toYmd(now);
+  const merge = collectionMerge(event.kind, 'prep');
   return prepTasksBetween([event], ticks, today, addDays(today, EVENT_AGENDA_DAYS), now)
     .filter((task) => task.state !== 'missed')
     .map((task): AgendaEntry => {
@@ -359,6 +378,7 @@ export function prepAgenda(event: HomeEvent, ticks: PrepTick[], now: number, url
         detail: t('events.before', { what: midSentence(eventWhen(event, task.occurrence, toYmd(task.deadline))) }),
         url,
         status: task.tick ? 'done' : now >= task.deadline ? 'overdue' : 'upcoming',
+        ...(merge ? { merge } : {}),
       };
     });
 }
@@ -398,6 +418,7 @@ export function prepReminders(events: HomeEvent[], ticks: PrepTick[], now: numbe
       ref: prepReminderRef(t.event.id),
       private: false,
       source: prepSource(t),
+      ...((merge) => (merge ? { merge } : {}))(collectionMerge(t.event.kind, 'prep')),
     }));
 }
 

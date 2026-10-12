@@ -2,10 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { allDayStart } from '@huishouden/pwa-kit/agenda';
 import { atTime } from '@huishouden/pwa-kit/time';
 import {
-  eventPresets, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepSource, prepTasks, withOccurrenceChange,
+  collectionMerge, eventPresets, eventAgenda, eventWhen, fromSeries, guessEventKind, prepTitleFrom, splitRegular, hasEventNamed, nextUp, occurrenceWords, prepAgenda, prepReminders, prepSource, prepTasks, withOccurrenceChange,
 } from './events';
 import { readSource, sourceAllowed, stillDue } from '@huishouden/pwa-kit/reminder-source';
-import { reminderDoc } from '@huishouden/pwa-kit/reminders';
+import { reminderDoc, reminderMergeKey, mergedReminderText } from '@huishouden/pwa-kit/reminders';
+import { mergeAgenda, toAgendaItem, agendaDoc } from '@huishouden/pwa-kit/agenda';
 import { prepTodo } from './todos';
 import { eventDoc, type HomeEvent, type PrepTick } from './model';
 import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
@@ -150,6 +151,7 @@ describe('the household agenda and reminders', () => {
       detail: 'Before garbage pickup tomorrow at 7 AM',
       url: URL,
       status: 'done',
+      merge: { key: 'collection:prep', part: 'garbage', title: 'Take the {parts} out' },
     });
     expect(items[1].status).toBe('upcoming');
     expect(prepAgenda(trash, [], atTime('2031-10-22', '20:00'), URL)[0].status).toBe('overdue');
@@ -244,5 +246,41 @@ describe('calendar suggestions', () => {
   test('a reminder title for one weekday becomes one for every pickup', () => {
     expect(prepTitleFrom('Garbage out for Monday Pickup')).toBe('Garbage out for pickup');
     expect(prepTitleFrom('Put the bins out')).toBe('Put the bins out');
+  });
+});
+
+describe('pickups the same morning show as one', () => {
+  const now = atTime('2031-10-16', '10:30');
+  const recycling: HomeEvent = {
+    ...trash,
+    id: 'e3',
+    title: 'Recycling pickup',
+    kind: 'recycling',
+    rule: { freq: 'week', every: 2, start: '2031-01-02' },
+    prep: { title: 'Put the recycling out', offset: { daysBefore: 1, time: '19:00' }, remind: true },
+  };
+  const stored = (ref: string, items: ReturnType<typeof eventAgenda>) => items.map((i, n) => toAgendaItem(`${ref}-${n}`, { ...agendaDoc('home', { ...i, ref }, 'sam@example.com', now), private: false }));
+
+  test('garbage, recycling and yard waste carry the merge; a lawn service does not', () => {
+    expect(eventAgenda(trash, [], now, URL)[0].merge).toEqual({ key: 'collection', part: 'garbage', title: '{parts} pickup' });
+    expect(eventAgenda({ ...trash, kind: 'yard waste' }, [], now, URL)[0].merge?.part).toBe('yard waste');
+    expect(eventAgenda(lawn, [], now, URL)[0].merge).toBeUndefined();
+    expect(collectionMerge('other', 'prep')).toBeUndefined();
+  });
+
+  test('the portal shows "Garbage and recycling pickup" on the days both come, garbage alone on the others', () => {
+    const shown = mergeAgenda([...stored('event:e1', eventAgenda(trash, [], now, URL)), ...stored('event:e3', eventAgenda(recycling, [], now, URL))], 'en');
+    const titles = shown.filter((i) => i.start < atTime('2031-11-01', '00:00')).map((i) => i.title);
+    expect(titles).toEqual(['Garbage pickup', 'Garbage and recycling pickup', 'Garbage pickup']);
+  });
+
+  test('the night before: one task and one notification for both', () => {
+    const tasks = mergeAgenda([...stored('prep:e1', prepAgenda(trash, [], now, URL)), ...stored('prep:e3', prepAgenda(recycling, [], now, URL))], 'en');
+    expect(tasks.map((i) => i.title).slice(0, 2)).toEqual(['Take the garbage and recycling out', 'Take the garbage out']);
+    const reminders = prepReminders([trash, recycling], [], now, URL);
+    const both = reminders.filter((r) => r.at === atTime('2031-10-22', '19:00'));
+    expect(both).toHaveLength(2);
+    expect(reminderMergeKey({ ...both[0], recipients: 'all' })).toBe(reminderMergeKey({ ...both[1], recipients: 'all' }));
+    expect(mergedReminderText(both.map((r) => ({ ...r, recipients: 'all' as const })), 'en').title).toBe('Take the garbage and recycling out');
   });
 });
