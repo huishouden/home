@@ -11,43 +11,62 @@ import type { DataKey, Op } from './actions';
 // What Home publishes for the household (the agenda, the to-do list, the reminders before regular
 // events), as plain functions of a Firestore and the data, so each is read-budgeted on the
 // emulators (e2e/reads.sdk.ts). The live store calls them.
+//
+// One convention for every publisher here: it never rejects. Each step that fails is reported to
+// `onError` (default: a console warning) and the steps after it still run; a step's result is
+// null when it failed. Steps run one after the other, each reading what is there when it runs.
 
 const REGULAR_URL = screen('regular');
 
 type Published = NonNullable<Parameters<typeof syncAgenda>[4]['published']>;
+type What = 'agenda' | 'reminders' | 'to-dos';
 
 export interface PublishOptions {
   /** A helper's device: only what helpers may read and write. */
   restricted?: boolean;
   /** Where this device notes what it published (default localStorage; null reads every time). */
   published?: Published | null;
+  /** Hears a step's failure; the publish goes on with the next step. */
+  onError?: (e: unknown, what: What) => void;
 }
 
-const settle = <T,>(p: Promise<T>): Promise<PromiseSettledResult<T>> => p.then((value) => ({ status: 'fulfilled' as const, value }), (reason: unknown) => ({ status: 'rejected' as const, reason }));
+const WARNINGS: Record<What, string> = { agenda: "Couldn't update the household agenda", reminders: "Couldn't schedule reminders", 'to-dos': "Couldn't update the household to-do list" };
+const warn = (e: unknown, what: What) => console.warn(WARNINGS[what], e);
 
 const publishedOf = ({ published }: PublishOptions) => (published === undefined ? {} : { published });
 
+async function step<R>(what: What, run: () => Promise<R>, { onError = warn }: PublishOptions): Promise<R | null> {
+  try {
+    return await run();
+  } catch (e) {
+    onError(e, what);
+    return null;
+  }
+}
+
+const syncPrepReminders = (db: Firestore, householdId: string, me: string, data: Pick<HomeData, 'events' | 'prep'>, now: number, options: PublishOptions) =>
+  localizeReminders(() => prepReminders(data.events, data.prep, now, APP_URL)).then((items) =>
+    syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted: options.restricted ?? false, ...publishedOf(options) }),
+  );
+
 /**
  * On open, with every list loaded: the household agenda made to match Home's data (one query), then
- * the reminders before regular events topped up for the next two weeks (one query). One after the
- * other, each reading what is there when it runs; one failing doesn't stop the other (its result is
- * the error).
+ * the reminders before regular events topped up for the next two weeks (one query).
  */
 export async function publishOnOpen(db: Firestore, householdId: string, me: string, data: HomeData, now: number, options: PublishOptions = {}) {
-  const { restricted = false } = options;
-  const agenda = await settle(localizeAgenda(() => agendaItems(data, now)).then((items) => syncAgenda(db, householdId, AGENDA_APP, items, { by: me, restricted, now, ...publishedOf(options) })));
-  const reminders = await settle(localizeReminders(() => prepReminders(data.events, data.prep, now, APP_URL)).then((items) => syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted, ...publishedOf(options) })));
+  const restricted = options.restricted ?? false;
+  const agenda = await step('agenda', () => localizeAgenda(() => agendaItems(data, now)).then((items) => syncAgenda(db, householdId, AGENDA_APP, items, { by: me, restricted, now, ...publishedOf(options) })), options);
+  const reminders = await step('reminders', () => syncPrepReminders(db, householdId, me, data, now, options), options);
   return { agenda, reminders };
 }
 
 /** The household to-do list made to match Home's data: one query, none when this device just published the same. */
-export async function publishTodos(db: Firestore, householdId: string, me: string, data: HomeData, now: number, options: PublishOptions = {}) {
-  const items = await localizeTodos(() => todoItems(data, now));
-  return syncTodos(db, householdId, AGENDA_APP, items, { by: me, restricted: options.restricted ?? false, now, ...publishedOf(options) });
+export function publishTodos(db: Firestore, householdId: string, me: string, data: HomeData, now: number, options: PublishOptions = {}) {
+  return step('to-dos', async () => syncTodos(db, householdId, AGENDA_APP, await localizeTodos(() => todoItems(data, now)), { by: me, restricted: options.restricted ?? false, now, ...publishedOf(options) }), options);
 }
 
 /** A record's agenda items, by ref, in `data`: none when it isn't there. */
-export function itemsOf(data: HomeData, col: DataKey, id: string, now: number): [string, AgendaEntry[]][] {
+function itemsOf(data: HomeData, col: DataKey, id: string, now: number): [string, AgendaEntry[]][] {
   const { contacts } = data;
   if (col === 'tasks') {
     const t = data.tasks.find((x) => x.id === id);
@@ -70,19 +89,16 @@ export function itemsOf(data: HomeData, col: DataKey, id: string, now: number): 
   ];
 }
 
-/** One record's agenda items replaced (one query of that ref's items), in every language. */
-export const publishRef = (db: Firestore, householdId: string, me: string, ref: string, build: () => AgendaEntry[], { restricted = false }: PublishOptions = {}) =>
-  localizeAgenda(build).then((items) => replaceAgenda(db, householdId, AGENDA_APP, ref, items, { by: me, restricted }));
+/** One step of a publish after a change: a ref's agenda items replaced or removed, or the reminders topped up. */
+export type Step = { kind: 'replace'; ref: string; items: AgendaEntry[] } | { kind: 'remove'; ref: string } | { kind: 'reminders' };
 
 /**
- * After a write: replaces the agenda items of each record it touched (one query per ref), removes
- * those of deleted ones, and tops up the reminders (one query) when an event or a tick changed.
- * Records with no items before or after are left alone. One step after the other; `onError` hears
- * a step's failure and the rest still run.
+ * What a write changes on the agenda and reminders: for each record it touched, its items replaced
+ * (or removed when it was deleted), once per ref; records with no items before or after are left
+ * alone; the reminders when an event or a tick changed. Pure.
  */
-export async function publishChanges(db: Firestore, householdId: string, me: string, before: HomeData, after: HomeData, ops: Op[], now: number, options: PublishOptions & { onError?: (e: unknown) => void } = {}) {
-  const { restricted = false, onError } = options;
-  const steps: (() => Promise<unknown>)[] = [];
+export function planChanges(before: HomeData, after: HomeData, ops: Op[], now: number): Step[] {
+  const steps: Step[] = [];
   const done = new Set<string>();
   for (const op of ops) {
     const gone = (op.col === 'events' && !after.events.some((e) => e.id === op.id)) || (op.col !== 'prep' && !op.data);
@@ -90,11 +106,46 @@ export async function publishChanges(db: Firestore, householdId: string, me: str
     for (const [ref, items] of itemsOf(after, op.col, op.id, now)) {
       if (done.has(ref)) continue;
       done.add(ref);
-      if (gone) steps.push(() => removeAgenda(db, householdId, AGENDA_APP, ref, { restricted }));
-      else if (items.length || was.get(ref)?.length) steps.push(() => publishRef(db, householdId, me, ref, () => new Map(itemsOf(after, op.col, op.id, now)).get(ref) ?? [], { restricted }));
+      if (gone) steps.push({ kind: 'remove', ref });
+      else if (items.length || was.get(ref)?.length) steps.push({ kind: 'replace', ref, items });
     }
   }
-  if (ops.some((op) => op.col === 'events' || op.col === 'prep'))
-    steps.push(() => localizeReminders(() => prepReminders(after.events, after.prep, now, APP_URL)).then((items) => syncReminders(db, householdId, AGENDA_APP, items, me, now, { restricted })));
-  for (const step of steps) await step().catch((e) => onError?.(e));
+  if (ops.some((op) => op.col === 'events' || op.col === 'prep')) steps.push({ kind: 'reminders' });
+  return steps;
 }
+
+/**
+ * What a contact's new name changes: the agenda items of every job, visit and event that names it.
+ * Records with no items (a visit done, a job outside the agenda's window) are left alone: a name
+ * can't give them any. Pure.
+ */
+export function planContactRename(data: HomeData, contactId: string, name: string, now: number): Step[] {
+  const renamed = { ...data, contacts: data.contacts.map((c) => (c.id === contactId ? { ...c, name } : c)) };
+  const records: [DataKey, string][] = [
+    ...data.tasks.filter((x) => x.contactId === contactId).map((x): [DataKey, string] => ['tasks', x.id]),
+    ...data.log.filter((x) => x.contactId === contactId).map((x): [DataKey, string] => ['log', x.id]),
+    ...data.events.filter((x) => x.contactId === contactId).map((x): [DataKey, string] => ['events', x.id]),
+  ];
+  return records.flatMap(([col, id]): Step[] => {
+    const [ref, items] = itemsOf(renamed, col, id, now)[0];
+    return items.length ? [{ kind: 'replace', ref, items }] : [];
+  });
+}
+
+/** Runs the steps one after the other, one query each, the agenda in every language. */
+export async function runSteps(db: Firestore, householdId: string, me: string, steps: Step[], after: Pick<HomeData, 'events' | 'prep'>, now: number, options: PublishOptions = {}): Promise<void> {
+  const restricted = options.restricted ?? false;
+  for (const s of steps) {
+    if (s.kind === 'reminders') await step('reminders', () => syncPrepReminders(db, householdId, me, after, now, options), options);
+    else if (s.kind === 'remove') await step('agenda', () => removeAgenda(db, householdId, AGENDA_APP, s.ref, { restricted }), options);
+    else await step('agenda', () => localizeAgenda(() => s.items).then((items) => replaceAgenda(db, householdId, AGENDA_APP, s.ref, items, { by: me, restricted })), options);
+  }
+}
+
+/** After a write: `planChanges`, run. */
+export const publishChanges = (db: Firestore, householdId: string, me: string, before: HomeData, after: HomeData, ops: Op[], now: number, options: PublishOptions = {}) =>
+  runSteps(db, householdId, me, planChanges(before, after, ops, now), after, now, options);
+
+/** After a contact is renamed: `planContactRename`, run. */
+export const publishContactRename = (db: Firestore, householdId: string, me: string, data: HomeData, contactId: string, name: string, now: number, options: PublishOptions = {}) =>
+  runSteps(db, householdId, me, planContactRename(data, contactId, name, now), data, now, options);

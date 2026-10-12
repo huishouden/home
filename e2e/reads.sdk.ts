@@ -21,7 +21,7 @@ const real = await import('firebase/firestore');
 const counter = readCounter();
 mock.module('firebase/firestore', () => counter.sdk(real));
 const { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, terminate } = await import('firebase/firestore');
-const { publishChanges, publishOnOpen, publishTodos } = await import('../src/data/publish');
+const { publishChanges, publishContactRename, publishOnOpen, publishTodos } = await import('../src/data/publish');
 
 const emulator = e2eTarget();
 const HOUR = 3_600_000;
@@ -85,9 +85,12 @@ const memory = () => {
   const notes = new Map<string, string>();
   return { getItem: (k: string) => notes.get(k) ?? null, setItem: (k: string, v: string) => void notes.set(k, v), removeItem: (k: string) => void notes.delete(k), key: (i: number) => [...notes.keys()][i] ?? null, get length() { return notes.size; } };
 };
-const settled = <T,>(r: PromiseSettledResult<T>): T => {
-  if (r.status === 'rejected') throw r.reason;
-  return r.value;
+const fail = (e: unknown) => {
+  throw e;
+};
+const ok = <T,>(r: T | null): T => {
+  if (r === null) throw new Error('a step failed');
+  return r;
 };
 
 /** Another device's stray item in each list Home publishes to: the sync must remove it. */
@@ -99,22 +102,22 @@ const stray = (n: number) => ({
 
 describe.skipIf(emulator !== 'emulator')('on open: the agenda and the reminders, one query each, none when this device already published the same', () => {
   test('first, again, and again with this device\'s note', async () => {
-    const first = await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: null }), { max: 2, min: 2, counter, label: 'Home on open, first' });
-    settled(first.value.agenda);
-    settled(first.value.reminders);
+    const first = await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: null, onError: fail }), { max: 2, min: 2, counter, label: 'Home on open, first' });
+    ok(first.value.agenda);
+    ok(first.value.reminders);
     // Again: the queries return what the first wrote: 23 agenda items (the garbage's pickups and the
     // evenings before them, 17 together; the jobs, the visits and the warranty) and 2 reminders (the
     // evenings before in the next two weeks).
-    const { value, reads } = await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: null }), { max: 25, min: 25, counter, label: 'Home on open, again' });
-    expect(reads).toBe(settled(value.agenda).unchanged + settled(value.reminders).unchanged);
+    const { value, reads } = await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: null, onError: fail }), { max: 25, min: 25, counter, label: 'Home on open, again' });
+    expect(reads).toBe(ok(value.agenda).unchanged + ok(value.reminders).unchanged);
     const store = memory();
-    await publishOnOpen(db, hh.id, admin, data(), NOW, { published: store });
-    await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: store }), { max: 0, counter, label: 'Home on open, published' });
+    await publishOnOpen(db, hh.id, admin, data(), NOW, { published: store, onError: fail });
+    await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: store, onError: fail }), { max: 0, counter, label: 'Home on open, published' });
   });
 
   test('interleaving: another device writes before each of its two reads; one pass, each read sees the strays written before it', async () => {
     let n = 0;
-    const { value } = await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: null }), {
+    const { value } = await expectReads(() => publishOnOpen(db, hh.id, admin, data(), NOW, { published: null, onError: fail }), {
       // The 25, the agenda's one stray, the reminders' two.
       max: 28,
       min: 28,
@@ -123,24 +126,24 @@ describe.skipIf(emulator !== 'emulator')('on open: the agenda and the reminders,
       beforeRead: writeBeforeEachRead(() => writeTestDocs(hh, stray(++n))),
     });
     expect(n).toBe(2);
-    expect([settled(value.agenda).deleted, settled(value.reminders).deleted]).toEqual([1, 2]);
+    expect([ok(value.agenda).deleted, ok(value.reminders).deleted]).toEqual([1, 2]);
   });
 });
 
 describe.skipIf(emulator !== 'emulator')('the to-do list: one query, none when this device already published the same', () => {
   test('first, again, and with the note', async () => {
     // First: the query finds the earlier strays' to-dos (two), and removes them.
-    await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: null }), { max: 2, min: 2, counter, label: 'Home to-dos, first' });
+    await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: null, onError: fail }), { max: 2, min: 2, counter, label: 'Home to-dos, first' });
     // Again: the overdue job and the one due in three days.
-    const { value } = await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: null }), { max: 2, min: 2, counter, label: 'Home to-dos, again' });
-    expect(value.unchanged).toBe(2);
+    const { value } = await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: null, onError: fail }), { max: 2, min: 2, counter, label: 'Home to-dos, again' });
+    expect(ok(value).unchanged).toBe(2);
     const store = memory();
-    await publishTodos(db, hh.id, admin, data(), NOW, { published: store });
-    await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: store }), { max: 0, counter, label: 'Home to-dos, published' });
+    await publishTodos(db, hh.id, admin, data(), NOW, { published: store, onError: fail });
+    await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: store, onError: fail }), { max: 0, counter, label: 'Home to-dos, published' });
   });
 
   test('interleaving: a stray lands before its read; read once and removed', async () => {
-    const { value } = await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: null }), {
+    const { value } = await expectReads(() => publishTodos(db, hh.id, admin, data(), NOW, { published: null, onError: fail }), {
       max: 3,
       min: 3,
       counter,
@@ -157,13 +160,13 @@ describe.skipIf(emulator !== 'emulator')('after a write: one query per record it
     const jobOps: Op[] = [{ col: 'tasks', id: 'gutters', data: { title: 'Test gutters, front' } }];
     const jobAfter = { ...before, tasks: before.tasks.map((t) => (t.id === 'gutters' ? { ...t, title: 'Test gutters, front' } : t)) };
     // The job's one agenda item.
-    await expectReads(() => publishChanges(db, hh.id, admin, before, jobAfter, jobOps, NOW, { onError: (e) => { throw e; } }), { max: 1, min: 1, counter, label: 'Home after a job edit' });
+    await expectReads(() => publishChanges(db, hh.id, admin, before, jobAfter, jobOps, NOW, { onError: fail }), { max: 1, min: 1, counter, label: 'Home after a job edit' });
     const moved = { ...before.events[0], time: '08:00' as const };
     const eventOps: Op[] = [{ col: 'events', id: 'bins', data: { time: '08:00' } }];
     const eventAfter = { ...before, events: [moved] };
     // The event's 17 agenda items (its pickups and the evenings before), and the reminders: the two,
     // and the to-do test's stray, removed.
-    await expectReads(() => publishChanges(db, hh.id, admin, before, eventAfter, eventOps, NOW, { onError: (e) => { throw e; } }), { max: 20, min: 20, counter, label: 'Home after an event edit' });
+    await expectReads(() => publishChanges(db, hh.id, admin, before, eventAfter, eventOps, NOW, { onError: fail }), { max: 20, min: 20, counter, label: 'Home after an event edit' });
   });
 
   test('interleaving: another device writes before each of its three reads', async () => {
@@ -172,7 +175,7 @@ describe.skipIf(emulator !== 'emulator')('after a write: one query per record it
     const eventAfter = { ...before, events: [{ ...before.events[0], time: '09:00' as const }] };
     let n = 20;
     // The 17 agenda items, then the two reminders and the three strays written before it.
-    await expectReads(() => publishChanges(db, hh.id, admin, before, eventAfter, eventOps, NOW, { onError: (e) => { throw e; } }), {
+    await expectReads(() => publishChanges(db, hh.id, admin, before, eventAfter, eventOps, NOW, { onError: fail }), {
       max: 22,
       min: 22,
       counter,
@@ -180,5 +183,40 @@ describe.skipIf(emulator !== 'emulator')('after a write: one query per record it
       beforeRead: writeBeforeEachRead(() => writeTestDocs(hh, stray(++n))),
     });
     expect(n - 20).toBe(3);
+  });
+});
+
+describe.skipIf(emulator !== 'emulator')('a contact renamed: one query per job, visit and event naming it that has agenda items', () => {
+  // Test Pro does the gutters, the pest visit booked and the lawn service of a week ago, and did a
+  // repair 200 days ago (nothing on the agenda: not read).
+  const withPro = (name: string): HomeData => {
+    const d = data();
+    const pro = { id: 'pro', name, apps: ['home'], createdAt: NOW - 90 * DAY, by: admin };
+    const named = <T extends { id: string }>(list: T[], ids: string[]) => list.map((x) => (ids.includes(x.id) ? { ...x, contactId: 'pro' } : x));
+    return { ...d, contacts: [pro], tasks: named(d.tasks, ['gutters']), log: [...named(d.log, ['pest', 'lawn']), { id: 'old', title: 'Test repair', date: addDays(TODAY, -200), contactId: 'pro', createdAt: NOW - 200 * DAY, by: admin }] };
+  };
+
+  test('renamed', async () => {
+    // The three records' one item each; the old repair's ref isn't queried.
+    await expectReads(() => publishContactRename(db, hh.id, admin, withPro('Test Pro'), 'pro', 'Test Pros', NOW, { onError: fail }), { max: 3, min: 3, counter, label: 'Home after a contact rename' });
+  });
+
+  test("interleaving: another device adds an item under each record's ref before its read; each read once and replaced", async () => {
+    const order = ['job:gutters', 'visit:pest', 'visit:lawn'];
+    let n = 0;
+    // Each ref's item and the extra written before its query.
+    await expectReads(() => publishContactRename(db, hh.id, admin, withPro('Test Pros'), 'pro', 'Test Pro', NOW, { onError: fail }), {
+      max: 6,
+      min: 6,
+      counter,
+      label: 'Home after a contact rename, with a write before each read',
+      beforeRead: writeBeforeEachRead(() => {
+        const ref = order[n++];
+        return writeTestDocs(hh, { [`agenda/home_extra_${n}`]: agendaDoc('home', { ref, kind: 'due', title: `Extra ${n}`, start: NOW + 2 * DAY, allDay: true, url: URL }, admin, NOW) });
+      }),
+    });
+    expect(n).toBe(3);
+    // The extras were replaced away: the next rename reads the three items alone.
+    await expectReads(() => publishContactRename(db, hh.id, admin, withPro('Test Pro'), 'pro', 'Test Pros', NOW, { onError: fail }), { max: 3, min: 3, counter, label: 'Home after a contact rename, again' });
   });
 });

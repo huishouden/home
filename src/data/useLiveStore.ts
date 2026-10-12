@@ -8,8 +8,8 @@ import type { HomeEvent, HomeTask, PrepTick, ServiceEntry, Warranty } from '../l
 import { DAY } from '@huishouden/pwa-kit/time';
 import { readError } from '@huishouden/pwa-kit/feedback';
 import { db } from './firebase';
-import { COLLECTIONS, applyOps, createActions, type Backend, type DataKey } from './actions';
-import { itemsOf, publishChanges, publishOnOpen, publishRef, publishTodos } from './publish';
+import { COLLECTIONS, applyOps, createActions, type Backend } from './actions';
+import { publishChanges, publishContactRename, publishOnOpen, publishTodos } from './publish';
 import type { HomeActions, HomeStore } from './types';
 
 const { tasks: TASKS, log: LOG, warranties: WARRANTIES, events: EVENTS, prep: PREP } = COLLECTIONS;
@@ -83,10 +83,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     if (!allLoaded || synced.current) return;
     synced.current = true;
     // Every language's words, so each member reads the agenda, to-dos and reminders in their own.
-    void publishOnOpen(db, householdId, me, current.current, Date.now(), { restricted }).then(({ agenda, reminders }) => {
-      if (agenda.status === 'rejected') console.warn("Couldn't update the household agenda", agenda.reason);
-      if (reminders.status === 'rejected') console.warn("Couldn't schedule reminders", reminders.reason);
-    });
+    void publishOnOpen(db, householdId, me, current.current, Date.now(), { restricted });
   }, [allLoaded, householdId, me, restricted]);
 
   // The household to-do list follows Home's data: on open, and a few seconds after any change
@@ -95,7 +92,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
     if (!allLoaded) return;
     const timer = setTimeout(
       () => {
-        publishTodos(db, householdId, me, current.current, Date.now(), { restricted }).catch((e) => console.warn("Couldn't update the household to-do list", e));
+        void publishTodos(db, householdId, me, current.current, Date.now(), { restricted });
       },
       todosSynced.current ? TODO_DELAY_MS : 0,
     );
@@ -105,7 +102,6 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
 
   const actions = useMemo<HomeActions>(() => {
     // The agenda follows each save; a failure there never fails the save (the next open repairs it).
-    const warn = (e: unknown) => console.warn("Couldn't update the household agenda", e);
     const report = (p: Promise<unknown>) => void p.catch((e) => errorRef.current(readError(e, t('live.saveFailed'))));
 
     const contacts = householdContacts(db, householdId, APP, me, report);
@@ -114,7 +110,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
       write: (ops) => {
         report(commitOps(db, base, ops, (col) => COLLECTIONS[col]));
         const before = current.current;
-        void publishChanges(db, householdId, me, before, applyOps(before, ops), ops, Date.now(), { restricted, onError: warn });
+        void publishChanges(db, householdId, me, before, applyOps(before, ops), ops, Date.now(), { restricted });
       },
       contacts: {
         ...contacts,
@@ -122,18 +118,7 @@ export function useLiveStore(householdId: string, me: string, onError: (message:
           contacts.save(id, input);
           if (!id) return;
           // Jobs, visits and events name their contact on the agenda: a renamed one is republished.
-          const d = current.current;
-          const renamed = { ...d, contacts: d.contacts.map((c) => (c.id === id ? { ...c, name: input.name } : c)) };
-          const now = Date.now();
-          const refs: [DataKey, string][] = [
-            ...d.tasks.filter((x) => x.contactId === id).map((x): [DataKey, string] => ['tasks', x.id]),
-            ...d.log.filter((x) => x.contactId === id).map((x): [DataKey, string] => ['log', x.id]),
-            ...d.events.filter((x) => x.contactId === id).map((x): [DataKey, string] => ['events', x.id]),
-          ];
-          for (const [col, recordId] of refs) {
-            const [ref] = itemsOf(renamed, col, recordId, now)[0];
-            publishRef(db, householdId, me, ref, () => itemsOf(renamed, col, recordId, now)[0][1], { restricted }).catch(warn);
-          }
+          void publishContactRename(db, householdId, me, current.current, id, input.name, Date.now(), { restricted });
         },
       },
     };
