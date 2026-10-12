@@ -89,8 +89,12 @@ function itemsOf(data: HomeData, col: DataKey, id: string, now: number): [string
   ];
 }
 
-/** One step of a publish after a change: a ref's agenda items replaced or removed, or the reminders topped up. */
-export type Step = { kind: 'replace'; ref: string; items: AgendaEntry[] } | { kind: 'remove'; ref: string } | { kind: 'reminders' };
+/**
+ * One step of a publish after a change: a ref's agenda items replaced or removed, or the reminders
+ * topped up. A replace carries the builder of its items, not the items: `localizeAgenda` runs it
+ * once per app language for each item's words in every language.
+ */
+export type Step = { kind: 'replace'; ref: string; build: () => AgendaEntry[] } | { kind: 'remove'; ref: string } | { kind: 'reminders' };
 
 /**
  * What a write changes on the agenda and reminders: for each record it touched, its items replaced
@@ -107,7 +111,7 @@ export function planChanges(before: HomeData, after: HomeData, ops: Op[], now: n
       if (done.has(ref)) continue;
       done.add(ref);
       if (gone) steps.push({ kind: 'remove', ref });
-      else if (items.length || was.get(ref)?.length) steps.push({ kind: 'replace', ref, items });
+      else if (items.length || was.get(ref)?.length) steps.push({ kind: 'replace', ref, build: () => new Map(itemsOf(after, op.col, op.id, now)).get(ref) ?? [] });
     }
   }
   if (ops.some((op) => op.col === 'events' || op.col === 'prep')) steps.push({ kind: 'reminders' });
@@ -128,7 +132,7 @@ export function planContactRename(data: HomeData, contactId: string, name: strin
   ];
   return records.flatMap(([col, id]): Step[] => {
     const [ref, items] = itemsOf(renamed, col, id, now)[0];
-    return items.length ? [{ kind: 'replace', ref, items }] : [];
+    return items.length ? [{ kind: 'replace', ref, build: () => itemsOf(renamed, col, id, now)[0][1] }] : [];
   });
 }
 
@@ -138,7 +142,7 @@ export async function runSteps(db: Firestore, householdId: string, me: string, s
   for (const s of steps) {
     if (s.kind === 'reminders') await step('reminders', () => syncPrepReminders(db, householdId, me, after, now, options), options);
     else if (s.kind === 'remove') await step('agenda', () => removeAgenda(db, householdId, AGENDA_APP, s.ref, { restricted }), options);
-    else await step('agenda', () => localizeAgenda(() => s.items).then((items) => replaceAgenda(db, householdId, AGENDA_APP, s.ref, items, { by: me, restricted })), options);
+    else await step('agenda', () => localizeAgenda(s.build).then((items) => replaceAgenda(db, householdId, AGENDA_APP, s.ref, items, { by: me, restricted })), options);
   }
 }
 

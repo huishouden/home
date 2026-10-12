@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Firestore } from 'firebase/firestore';
+import { localizeAgenda } from '@huishouden/pwa-kit/agenda';
 import { DEMO_NOW, demoData } from '../lib/demo';
 import { prepTickId } from '../lib/model';
 import { applyOps, type Op } from './actions';
@@ -49,5 +50,22 @@ describe('running the steps', () => {
     const steps: Step[] = [{ kind: 'remove', ref: 'job:a' }, { kind: 'remove', ref: 'job:b' }];
     await runSteps({} as Firestore, 'h1', 'alex@example.com', steps, demoData(), DEMO_NOW, { onError: (_e, what) => errors.push(what) });
     expect(errors).toEqual(['agenda', 'agenda']);
+  });
+});
+
+describe('a step carries its words in every language', () => {
+  test('a job edited and a contact renamed: each replaced item has its Spanish and Dutch words', async () => {
+    const before = demoData();
+    const task = before.tasks.find((t) => t.id === 'demo-task-gutters')!;
+    const ops: Op[] = [{ col: 'tasks', id: task.id, data: { ...task, title: 'Gutters, front' } }];
+    const [edit] = planChanges(before, applyOps(before, ops), ops, DEMO_NOW);
+    const [renamed] = planContactRename(before, 'demo-contact-roofing', 'Example Roofers', DEMO_NOW);
+    for (const step of [edit, renamed]) {
+      if (step?.kind !== 'replace') throw new Error('a replace step');
+      const [item] = await localizeAgenda(step.build);
+      expect(item.detail).toStartWith('Every 6 months');
+      expect(item.texts?.es?.detail).toStartWith('Cada 6 meses');
+      expect(item.texts?.nl?.detail).toStartWith('Elke 6 maanden');
+    }
   });
 });
