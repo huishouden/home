@@ -314,14 +314,18 @@ export function eventEdit(event: HomeEvent): AgendaEdit {
  * them (@huishouden/pwa-kit/merge): "Garbage and recycling pickup", and the night before "Take the
  * garbage and recycling out", one notification. The words are the kind's, not the event's own title.
  */
-const COLLECTION_KINDS = { trash: 'trash', recycling: 'recycling', 'yard waste': 'yard' } as const;
+const COLLECTION_PARTS = {
+  trash: { pickup: 'merge.pickup.trash', prep: 'merge.prep.trash' },
+  recycling: { pickup: 'merge.pickup.recycling', prep: 'merge.prep.recycling' },
+  'yard waste': { pickup: 'merge.pickup.yard', prep: 'merge.prep.yard' },
+} as const;
 
 export function collectionMerge(kind: EventKind, what: 'pickup' | 'prep'): MergeSpec | undefined {
-  const part = COLLECTION_KINDS[kind as keyof typeof COLLECTION_KINDS];
-  if (!part) return undefined;
+  const keys = COLLECTION_PARTS[kind as keyof typeof COLLECTION_PARTS];
+  if (!keys) return undefined;
   return what === 'pickup'
-    ? { key: 'collection', part: t(`merge.pickup.${part}`), title: t('merge.pickupTitle', { parts: '{parts}' }) }
-    : { key: 'collection:prep', part: t(`merge.prep.${part}`), title: t('merge.prepTitle', { parts: '{parts}' }) };
+    ? { key: 'collection', part: t(keys.pickup), title: t('merge.pickupTitle', { parts: '{parts}' }) }
+    : { key: 'collection:prep', part: t(keys.prep), title: t('merge.prepTitle', { parts: '{parts}' }) };
 }
 
 /**
