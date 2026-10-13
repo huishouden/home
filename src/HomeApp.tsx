@@ -52,7 +52,6 @@ interface Props {
   deviceSettings?: ReactNode;
 }
 
-// On phones the four primaries sit in the bottom bar; Warranties and Contacts are under More.
 /** A "Looks regular" offer: a new regular event, or (with `prep`) the thing to do before one the household has. */
 type RegularOffer = { series: CalendarSeries; prep?: PrepOffer };
 
