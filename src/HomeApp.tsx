@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
 import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
-import { CalendarSync, Contact as ContactIcon, History as HistoryIcon, House, Repeat, ShieldCheck, Wrench } from 'lucide-react';
+import { CalendarSync } from 'lucide-react';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import { isImported, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
@@ -12,11 +12,11 @@ import { describeRule, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import { SuggestionsCard } from '@huishouden/pwa-kit/react/suggestions';
 import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
-import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
+import { ScreenSkeleton, Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import { refusal } from '@huishouden/pwa-kit/roles';
 import type { RoleState } from '@huishouden/pwa-kit/react/roles';
 import { mayChange, type HomeStore } from './data/types';
-import { Header, type Tab } from './components/Header';
+import { Header } from './components/Header';
 import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
@@ -27,7 +27,7 @@ import { APP, ROLES, roleLabel } from './lib/contacts';
 import { maySetHome } from './lib/address';
 import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
-import { tabFromHash } from './lib/tabs';
+import { tabs, useHomeTab } from './components/homeTabs';
 import { Overview, type TabId } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
 import { History } from './screens/History';
@@ -52,16 +52,6 @@ interface Props {
   deviceSettings?: ReactNode;
 }
 
-// On phones the four primaries sit in the bottom bar; Warranties and Contacts are under More.
-const tabs = (t: ReturnType<typeof useT>): Tab[] => [
-  { id: 'overview', label: t('tab.overview'), icon: House, primary: true },
-  { id: 'upkeep', label: t('tab.upkeep'), icon: Wrench, primary: true },
-  { id: 'regular', label: t('tab.regular'), icon: Repeat, primary: true },
-  { id: 'history', label: t('tab.history'), icon: HistoryIcon, primary: true },
-  { id: 'warranties', label: t('tab.warranties'), icon: ShieldCheck },
-  { id: 'contacts', label: t('tab.contacts'), icon: ContactIcon },
-];
-
 /** A "Looks regular" offer: a new regular event, or (with `prep`) the thing to do before one the household has. */
 type RegularOffer = { series: CalendarSeries; prep?: PrepOffer };
 
@@ -72,8 +62,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const t = useT();
   const { now, read } = useClock();
   const today = toYmd(now);
-  // Agenda links open a screen: #upkeep, #history, #warranties.
-  const [tab, setTab] = useState<TabId>(() => tabFromHash(window.location.hash));
+  const [tab, setTab] = useHomeTab();
   const [task, setTask] = useState<Editing<HomeTask>>(null);
   const [entry, setEntry] = useState<Editing<ServiceEntry>>(null);
   const [warranty, setWarranty] = useState<Editing<Warranty>>(null);
@@ -125,18 +114,13 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     void readSharedContact().then((cards) => {
       if (!cards) return;
       clearSharedContact();
-      setTab('contacts');
+      setTab('contacts', { replace: true });
       setContact({ item: null, shared: cards });
     });
   }, []);
 
   useEffect(() => {
     document.title = t('app.documentTitle');
-    const follow = () => {
-      if (window.location.hash) setTab(tabFromHash(window.location.hash));
-    };
-    window.addEventListener('hashchange', follow);
-    return () => window.removeEventListener('hashchange', follow);
   }, [t]);
 
   // A helper or kid opening someone else's record is told who can change it rather than given a form.
@@ -157,7 +141,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   };
 
   let content: ReactNode;
-  if (!store.ready) content = <p className="p-2 text-lg text-muted">{t('app.loading')}</p>;
+  if (!store.ready) content = <ScreenSkeleton label={t('app.loading')} />;
   else if (tab === 'upkeep')
     content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((x: HomeTask) => setTask({ item: x }))} onDone={markDone} onResume={resumeTask} />;
   else if (tab === 'history')

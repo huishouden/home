@@ -5,7 +5,8 @@ import { addDays } from '@huishouden/pwa-kit/time';
 import { AGENDA_APP, APP_URL, agendaItems, isBookedVisit, jobAgenda, visitAgenda, warrantyAgenda } from './agenda';
 import { DEMO_NOW, demoData } from './demo';
 import type { HomeTask, ServiceEntry, Warranty } from './model';
-import { tabFromHash } from './tabs';
+import { TAB_IDS } from './tabs';
+import { tabFromUrl } from '@huishouden/pwa-kit/url-state';
 import { SUITE_ORIGIN } from '@huishouden/pwa-kit/site';
 
 const now = new Date(2031, 9, 16, 10, 30).getTime();
@@ -130,11 +131,13 @@ describe('everything', () => {
   });
 
   test('a deep link opens its screen; anything else opens the overview', () => {
-    expect(tabFromHash('#upkeep')).toBe('upkeep');
-    expect(tabFromHash('#warranties')).toBe('warranties');
-    expect(tabFromHash('#regular')).toBe('regular');
-    expect(tabFromHash('')).toBe('overview');
-    expect(tabFromHash('#nope')).toBe('overview');
+    const open = (hash: string) => tabFromUrl(`https://suite.example.com/home/${hash}`, TAB_IDS, 'overview', { legacyHash: true });
+    expect(open('#upkeep')).toBe('upkeep');
+    expect(open('#warranties')).toBe('warranties');
+    expect(open('#regular')).toBe('regular');
+    expect(open('')).toBe('overview');
+    expect(open('#nope')).toBe('overview');
+    expect(open('?tab=history')).toBe('history');
   });
 });
 
