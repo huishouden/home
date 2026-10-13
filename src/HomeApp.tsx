@@ -142,7 +142,8 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
 
   const frame = homeFrame(t, { user, onSignIn, onSignOut, signingIn }, { id: tab, choose: (id) => setTab(id) });
   // The first data still on its way: the opening frame, which counts no view yet.
-  if (!store.ready) return <AppOpening {...frame} phase="data" />;
+  // The toast stays mounted: a first load that fails says so there.
+  if (!store.ready) return <AppOpening {...frame} phase="data" after={<Toast toast={toast} onDone={clearToast} />} />;
 
   let content: ReactNode;
   if (tab === 'upkeep')
