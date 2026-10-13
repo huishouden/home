@@ -12,11 +12,11 @@ import { describeRule, type Occurrence } from '@huishouden/pwa-kit/schedule';
 import { SuggestionsCard } from '@huishouden/pwa-kit/react/suggestions';
 import { CalendarSuggestions, calendarAvailable, useCalendarSuggestions } from '@huishouden/pwa-kit/react/calendar';
 import { ContactDialog } from '@huishouden/pwa-kit/react/contacts';
-import { ScreenSkeleton, Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
+import { Toast, type ToastState } from '@huishouden/pwa-kit/react/ui';
 import { refusal } from '@huishouden/pwa-kit/roles';
 import type { RoleState } from '@huishouden/pwa-kit/react/roles';
 import { mayChange, type HomeStore } from './data/types';
-import { Header } from './components/Header';
+import { AppFrame, AppOpening } from '@huishouden/pwa-kit/react/frame';
 import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
@@ -27,8 +27,8 @@ import { APP, ROLES, roleLabel } from './lib/contacts';
 import { maySetHome } from './lib/address';
 import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
-import { tabs, useHomeTab } from './components/homeTabs';
-import { Overview, type TabId } from './screens/Overview';
+import { homeFrame, useHomeTab } from './components/frame';
+import { Overview } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
 import { History } from './screens/History';
 import { Warranties } from './screens/Warranties';
@@ -140,9 +140,12 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
     notify(t('toast.resumed', { title: task.title }), () => actions.restoreTask(task));
   };
 
+  const frame = homeFrame(t, { user, onSignIn, onSignOut, signingIn }, { id: tab, choose: (id) => setTab(id) });
+  // The first data still on its way: the opening frame, which counts no view yet.
+  if (!store.ready) return <AppOpening {...frame} phase="data" />;
+
   let content: ReactNode;
-  if (!store.ready) content = <ScreenSkeleton label={t('app.loading')} />;
-  else if (tab === 'upkeep')
+  if (tab === 'upkeep')
     content = <Upkeep store={store} today={today} onAdd={() => setTask({ item: null })} onEdit={open((x: HomeTask) => setTask({ item: x }))} onDone={markDone} onResume={resumeTask} />;
   else if (tab === 'history')
     content = (
@@ -191,35 +194,8 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
       />
     );
 
-  return (
-    <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased lg:h-dvh lg:overflow-hidden">
-      <Header tabs={tabs(t)} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} onSignIn={onSignIn} onSignOut={onSignOut} signingIn={signingIn} />
-      <main className="mx-auto flex w-full max-w-[1200px] min-h-0 flex-1 flex-col gap-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-6">
-        {banner}
-        {tab === 'overview' && store.ready && (
-          <>
-            <SuggestionsCard
-              suggestions={regularOffers}
-              idOf={(o) => o.series.key}
-              titleOf={(o) => o.series.title}
-              detailOf={({ series: s, prep: p }) => {
-                const rule = s.time ? t('regular.ruleAt', { rule: describeRule(s.rule), at: atClock(s.time) }) : describeRule(s.rule);
-                return p ? t('suggest.ruleBefore', { rule, event: p.event.title }) : rule;
-              }}
-              lead={t('suggest.lead')}
-              label={t('suggest.label')}
-              moreLabel={t('suggest.more')}
-              icon={<CalendarSync size={20} className="shrink-0 text-link" aria-hidden="true" />}
-              addAs={({ series: s, prep: p }) => (p ? { label: t('suggest.usePrep'), ariaLabel: t('suggest.usePrepFor', { title: s.title, event: p.event.title }) } : null)}
-              onAdd={({ series: s, prep: p }) => setRegular(p ? { item: p.event, initial: { prep: p.prep } } : { item: null, initial: fromSeries(s) })}
-              onDismiss={(o) => o.series.matches.forEach(suggested.dismiss)}
-            />
-            <CalendarSuggestions suggestions={visits} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
-          </>
-        )}
-        <div className="min-h-0 flex-1">{content}</div>
-      </main>
-
+  const dialogs = (
+    <>
       {task && (
         <TaskDialog
           task={task.item}
@@ -363,7 +339,35 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
         />
       )}
       <Toast toast={toast} onDone={clearToast} />
-    </div>
+    </>
+  );
+
+  return (
+    <AppFrame {...frame} after={dialogs}>
+        {banner}
+        {tab === 'overview' && store.ready && (
+          <>
+            <SuggestionsCard
+              suggestions={regularOffers}
+              idOf={(o) => o.series.key}
+              titleOf={(o) => o.series.title}
+              detailOf={({ series: s, prep: p }) => {
+                const rule = s.time ? t('regular.ruleAt', { rule: describeRule(s.rule), at: atClock(s.time) }) : describeRule(s.rule);
+                return p ? t('suggest.ruleBefore', { rule, event: p.event.title }) : rule;
+              }}
+              lead={t('suggest.lead')}
+              label={t('suggest.label')}
+              moreLabel={t('suggest.more')}
+              icon={<CalendarSync size={20} className="shrink-0 text-link" aria-hidden="true" />}
+              addAs={({ series: s, prep: p }) => (p ? { label: t('suggest.usePrep'), ariaLabel: t('suggest.usePrepFor', { title: s.title, event: p.event.title }) } : null)}
+              onAdd={({ series: s, prep: p }) => setRegular(p ? { item: p.event, initial: { prep: p.prep } } : { item: null, initial: fromSeries(s) })}
+              onDismiss={(o) => o.series.matches.forEach(suggested.dismiss)}
+            />
+            <CalendarSuggestions suggestions={visits} now={now} onAdd={(m) => importEvents([m])} onDismiss={suggested.dismiss} />
+          </>
+        )}
+        <div className="min-h-0 flex-1">{content}</div>
+    </AppFrame>
   );
 }
 
