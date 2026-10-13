@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { clearSharedContact, readSharedContact, type Contact, type ParsedContact } from '@huishouden/pwa-kit/contacts';
 import type { EventInput, HomeEvent, HomeTask, ServiceEntry, ServiceInput, Warranty } from './lib/model';
-import { CalendarSync, Contact as ContactIcon, History as HistoryIcon, House, Repeat, ShieldCheck, Wrench } from 'lucide-react';
+import { CalendarSync } from 'lucide-react';
 import { shortDate, toYmd } from '@huishouden/pwa-kit/time';
 import { useClock } from '@huishouden/pwa-kit/react/clock';
 import { isImported, type CalendarMatch, type CalendarSeries } from '@huishouden/pwa-kit/calendar';
@@ -16,7 +16,7 @@ import { ScreenSkeleton, Toast, type ToastState } from '@huishouden/pwa-kit/reac
 import { refusal } from '@huishouden/pwa-kit/roles';
 import type { RoleState } from '@huishouden/pwa-kit/react/roles';
 import { mayChange, type HomeStore } from './data/types';
-import { Header, type Tab } from './components/Header';
+import { Header } from './components/Header';
 import { TaskDialog } from './components/TaskDialog';
 import { EntryDialog } from './components/EntryDialog';
 import { WarrantyDialog } from './components/WarrantyDialog';
@@ -27,8 +27,7 @@ import { APP, ROLES, roleLabel } from './lib/contacts';
 import { maySetHome } from './lib/address';
 import { calendarWords, fromCalendar } from './lib/calendarImport';
 import { auth } from './data/firebase';
-import { TAB_IDS } from './lib/tabs';
-import { useUrlTab } from '@huishouden/pwa-kit/react/url-state';
+import { tabs, useHomeTab } from './components/homeTabs';
 import { Overview, type TabId } from './screens/Overview';
 import { Upkeep } from './screens/Upkeep';
 import { History } from './screens/History';
@@ -54,15 +53,6 @@ interface Props {
 }
 
 // On phones the four primaries sit in the bottom bar; Warranties and Contacts are under More.
-export const tabs = (t: ReturnType<typeof useT>): Tab[] => [
-  { id: 'overview', label: t('tab.overview'), icon: House, primary: true },
-  { id: 'upkeep', label: t('tab.upkeep'), icon: Wrench, primary: true },
-  { id: 'regular', label: t('tab.regular'), icon: Repeat, primary: true },
-  { id: 'history', label: t('tab.history'), icon: HistoryIcon, primary: true },
-  { id: 'warranties', label: t('tab.warranties'), icon: ShieldCheck },
-  { id: 'contacts', label: t('tab.contacts'), icon: ContactIcon },
-];
-
 /** A "Looks regular" offer: a new regular event, or (with `prep`) the thing to do before one the household has. */
 type RegularOffer = { series: CalendarSeries; prep?: PrepOffer };
 
@@ -73,9 +63,7 @@ export function HomeApp({ store, user, onSignIn, onSignOut, signingIn, toast, no
   const t = useT();
   const { now, read } = useClock();
   const today = toYmd(now);
-  // The screen lives in the address (`?tab=upkeep`), so a reload (an update) and Back return to it;
-  // agenda links published as `#upkeep`, `#history`… still open their screen.
-  const [tab, setTab] = useUrlTab(TAB_IDS, 'overview', { legacyHash: true });
+  const [tab, setTab] = useHomeTab();
   const [task, setTask] = useState<Editing<HomeTask>>(null);
   const [entry, setEntry] = useState<Editing<ServiceEntry>>(null);
   const [warranty, setWarranty] = useState<Editing<Warranty>>(null);

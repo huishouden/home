@@ -9,9 +9,9 @@ import { useDemoStore } from './data/useDemoStore';
 import { DEMO_HOME, DEMO_NOW } from './lib/demo';
 import { setHome } from '@huishouden/pwa-kit/home';
 import { ClockProvider } from '@huishouden/pwa-kit/react/clock';
-import { HomeApp, tabs } from './HomeApp';
-import { TAB_IDS, type TabId } from './lib/tabs';
-import { useUrlTab } from '@huishouden/pwa-kit/react/url-state';
+import { HomeApp } from './HomeApp';
+import { tabs, useHomeTab } from './components/homeTabs';
+import type { TabId } from './lib/tabs';
 import { Header } from './components/Header';
 import { cardClass, primaryButton, SampleBanner, ScreenSkeleton, useToast } from '@huishouden/pwa-kit/react/ui';
 import { NotificationsCard, VAPID_PUBLIC_KEY } from './components/NotificationsCard';
@@ -145,7 +145,7 @@ function DemoInner({ read, signInError, ...frame }: FrameProps & { read: () => n
  */
 function Opening({ user, label, ...frame }: FrameProps & { user: User | null | undefined; label?: string }) {
   const t = useT();
-  const [tab, setTab] = useUrlTab(TAB_IDS, 'overview', { legacyHash: true });
+  const [tab, setTab] = useHomeTab();
   return (
     <div className="flex min-h-dvh flex-col bg-page font-sans text-ink antialiased">
       <Header tabs={tabs(t)} tab={tab} onTab={(id) => setTab(id as TabId)} user={user} {...frame} opening />
