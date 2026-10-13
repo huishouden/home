@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { captureScreenshot } from '@huishouden/pwa-kit/e2e';
+import { captureOpening, captureScreenshot } from '@huishouden/pwa-kit/e2e';
 import places from './fixtures/nominatim.json' with { type: 'json' };
 import { calendarEvents, mockCalendar } from './fixtures/calendar';
 
@@ -9,6 +9,9 @@ const fixedTime = '2031-10-16T10:30:00';
 const tab = (name: string) => async (p: import('@playwright/test').Page) => {
   await p.getByRole('button', { name, exact: true }).first().click();
 };
+
+// The frame while the app opens (the session restoring), held there: the kit's AppOpening.
+test('opening', ({ page }) => captureOpening(page, 'opening', { path: './?tab=upkeep', fixedTime }));
 
 test('overview', ({ page }) =>
   captureScreenshot(page, 'overview', {
